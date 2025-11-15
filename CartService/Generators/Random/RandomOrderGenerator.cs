@@ -1,0 +1,25 @@
+﻿using Shared.Contracts;
+
+namespace CartService.Generators.Random
+{
+    public class RandomOrderGenerator : BaseOrderGenerator
+    {
+        private static readonly System.Random Rnd = new System.Random();
+
+        public override Order GenerateOrder(CreateOrderRequest i_Request, List<Item> i_Items)
+        {
+            Order order = base.GenerateOrder(i_Request, i_Items);
+
+            order.CustomerId = randomCustomerId();
+            order.Currency = "USD";
+            
+            return order;
+        }
+
+        private string randomCustomerId()
+        {
+            return $"CUST-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+        }
+
+    }
+}

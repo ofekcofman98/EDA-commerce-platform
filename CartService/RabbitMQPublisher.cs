@@ -1,0 +1,59 @@
+﻿using RabbitMQ.Client;
+using System.Text.Json;
+using System.Text;
+using Shared.Contracts;
+
+namespace CartService
+{
+    public class RabbitMQPublisher : IEventProducer, IDisposable
+    {
+        /// <summary>
+        /// 
+        /// The class publishes the order as serialied JSON into RabbitMQ
+        /// 
+        /// </summary>
+        
+        private IConnection? _connection;
+        private IModel? _channel;
+
+        private const string k_ExchangeName = "orders_exchange";
+
+        public RabbitMQPublisher(ConnectionFactory i_Factory)
+        {
+            _connection = i_Factory.CreateConnection();
+            _channel = _connection.CreateModel();
+
+            _channel.ExchangeDeclare(exchange: "orderExchange", type: ExchangeType.Fanout);
+        }
+
+        public void DeclareQueue()
+        {
+            string queueName = _channel.QueueDeclare().QueueName;
+
+            _channel.QueueDeclare(queue: "orderQueue",
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null
+                );
+        }
+
+        public void PublishOrder(Order order)
+        {
+            string message = JsonSerializer.Serialize(order);
+            byte[] body = Encoding.UTF8.GetBytes(message);
+
+            _channel.BasicPublish(
+                exchange: k_ExchangeName,
+                routingKey: "",
+                basicProperties: null,
+                body: body);
+        }
+        public void Dispose()
+        {
+            _connection?.Close();
+            _channel?.Close();
+        }
+
+    }
+}
