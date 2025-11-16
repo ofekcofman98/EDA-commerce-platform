@@ -1,4 +1,4 @@
-using OrderService.BackgroundServices;
+﻿using OrderService.BackgroundServices;
 using OrderService.Data;
 using RabbitMQ.Client;
 
@@ -11,15 +11,31 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+var rmq = builder.Configuration.GetSection("RabbitMQ");
+
+builder.Services.AddSingleton<ConnectionFactory>(_ =>
+{
+    return new ConnectionFactory
+    {
+        HostName = rmq["HostName"] ?? "rabbitmq",
+        UserName = rmq["UserName"] ?? "user",
+        Password = rmq["Password"] ?? "password",
+        Port = int.TryParse(rmq["Port"], out var p) ? p : 5672,
+        DispatchConsumersAsync = true
+    };
+});
+
+
 builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 
-builder.Services.AddSingleton(new ConnectionFactory
-{
-    HostName = "localhost",
-    UserName = "guest",
-    Password = "guest",
-    DispatchConsumersAsync = true
-});
+//builder.Services.AddSingleton(new ConnectionFactory
+//{
+//    HostName = "localhost",
+//    UserName = "guest",
+//    Password = "guest",
+//    DispatchConsumersAsync = true
+//});
 
 builder.Services.AddHostedService<RabbitMQOrderListener>();
 
@@ -32,7 +48,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

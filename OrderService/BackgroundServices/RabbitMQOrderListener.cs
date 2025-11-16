@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Text;
 using Shared.Contracts;
+using OrderService.ShippingCost;
 
 namespace OrderService.BackgroundServices
 {
@@ -24,19 +25,28 @@ namespace OrderService.BackgroundServices
         private IConnection? _connection;
         private IModel? _channel;
 
-        private const string k_ExchangeName = "orders.exchange";
-        private const string k_QueueName = "orders.queue";
+        private const string k_ExchangeName = RabbitMQConstants.ExchangeName;
+        private const string k_QueueName = RabbitMQConstants.QueueName;
+        private const string k_DeadLetterExchange = "dlx_orders";
 
         public RabbitMQOrderListener(IOrderRepository i_Repository, ConnectionFactory i_Factory)
         {
             _repository = i_Repository;
-
             _connection = i_Factory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            _channel.ExchangeDeclare(exchange: "orderExchange", type: ExchangeType.Fanout); // ? not the responsibility?
+            _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout); // ? not the responsibility?
+            _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Direct);
 
-            _channel.QueueDeclare(queue: k_QueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueDeclare(
+                queue: k_QueueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: new Dictionary<string, object>
+                {
+                    { "x-dead-letter-exchange", k_DeadLetterExchange } 
+                });
             _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
 
         }
@@ -69,12 +79,12 @@ namespace OrderService.BackgroundServices
                 }
                 catch (Exception ex)
                 {
-                    _channel.BasicNack(deliveryTag: eventArg.DeliveryTag, multiple: false, requeue: true); // Acknowledge that the message was NOT recieved
+                    _channel.BasicNack(deliveryTag: eventArg.DeliveryTag, multiple: false, requeue: false); // Acknowledge that the message was NOT recieved
                 }
 
-                _channel.BasicConsume(queue: "order_processing_queue", autoAck: false, consumer: consumer);
-
             };
+
+            _channel.BasicConsume(queue: k_QueueName, autoAck: false, consumer: consumer);
 
             return Task.CompletedTask;
         }

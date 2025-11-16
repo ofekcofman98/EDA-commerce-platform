@@ -3,8 +3,9 @@ using CartService.Validator.Validators;
 using Shared.Contracts;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using CartService.Generators;
+using CartService.Producer;
 
-namespace CartService
+namespace CartService.OrderCreation
 {
     public class OrderCreationService : IOrderCreationService
     {
@@ -41,9 +42,9 @@ namespace CartService
 
             _producer.PublishOrder(newOrder);
 
-            return new ServiceResponse 
-            { 
-                IsSuccesful = true, 
+            return new ServiceResponse
+            {
+                IsSuccesful = true,
                 Order = newOrder,
                 OrderId = newOrder.OrderId
             };
@@ -53,7 +54,7 @@ namespace CartService
         {
             List<Item> items = _itemGenerator.GenerateItems(i_Request.numOfItems);
             Order newOrder = _orderGenerator.GenerateOrder(i_Request, items);
-            
+
             return newOrder;
         }
 
@@ -74,7 +75,7 @@ namespace CartService
         {
             IValidator<Item> validator = buildItemValidationChain();
 
-            foreach (Item item in i_Items) 
+            foreach (Item item in i_Items)
             {
                 ValidationResult result = validator.Handle(item);
 

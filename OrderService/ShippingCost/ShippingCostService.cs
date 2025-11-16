@@ -1,6 +1,6 @@
 ﻿using Shared.Contracts;
 
-namespace OrderService
+namespace OrderService.ShippingCost
 {
     public class ShippingCostService
     {
@@ -8,7 +8,7 @@ namespace OrderService
 
         public static decimal CalculateShippingCost(Order i_Order)
         {
-            return (i_Order.TotalAmount * k_Percent) / 100; 
+            return i_Order.TotalAmount * k_Percent / 100;
         }
     }
 }

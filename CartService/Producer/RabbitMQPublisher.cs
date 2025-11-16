@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text;
 using Shared.Contracts;
 
-namespace CartService
+namespace CartService.Producer
 {
     public class RabbitMQPublisher : IEventProducer, IDisposable
     {
@@ -12,12 +12,12 @@ namespace CartService
         /// The class publishes the order as serialied JSON into RabbitMQ
         /// 
         /// </summary>
-        
+
         private IConnection? _connection;
         private IModel? _channel;
 
-        private const string k_ExchangeName = "orders_exchange";
-        private const string k_QueueName = "orders.queue";
+        private const string k_ExchangeName = RabbitMQConstants.ExchangeName;
+        private const string k_QueueName = RabbitMQConstants.QueueName;
 
         public RabbitMQPublisher(ConnectionFactory i_Factory)
         {

@@ -1,6 +1,6 @@
 ﻿using Shared.Contracts;
 
-namespace CartService
+namespace CartService.OrderCreation
 {
     public interface IOrderCreationService
     {
