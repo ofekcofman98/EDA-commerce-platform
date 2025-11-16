@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Text;
 using Shared.Contracts;
 using OrderService.ShippingCost;
+using RabbitMQ.Client.Exceptions;
 
 namespace OrderService.BackgroundServices
 {
@@ -24,7 +25,12 @@ namespace OrderService.BackgroundServices
         private readonly IOrderRepository _repository;
         private IConnection? _connection;
         private IModel? _channel;
+        private readonly ConnectionFactory _factory;
 
+
+        private const int k_MaxRetries = 15;
+        private const int k_DelayMs = 5000; 
+                                            
         private const string k_ExchangeName = RabbitMQConstants.ExchangeName;
         private const string k_QueueName = RabbitMQConstants.QueueName;
         private const string k_DeadLetterExchange = "dlx_orders";
@@ -32,23 +38,64 @@ namespace OrderService.BackgroundServices
         public RabbitMQOrderListener(IOrderRepository i_Repository, ConnectionFactory i_Factory)
         {
             _repository = i_Repository;
-            _connection = i_Factory.CreateConnection();
-            _channel = _connection.CreateModel();
+            //_connection = i_Factory.CreateConnection();
+            //_channel = _connection.CreateModel();
+            _factory = i_Factory;
 
-            _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout); // ? not the responsibility?
-            _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Direct);
+            InitializeRabbitMQConnection();
 
-            _channel.QueueDeclare(
-                queue: k_QueueName,
-                durable: true,
-                exclusive: false,
-                autoDelete: false,
-                arguments: new Dictionary<string, object>
+            //_channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout); // ? not the responsibility?
+            //_channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Direct);
+
+            //_channel.QueueDeclare(
+            //    queue: k_QueueName,
+            //    durable: true,
+            //    exclusive: false,
+            //    autoDelete: false,
+            //    arguments: new Dictionary<string, object>
+            //    {
+            //        { "x-dead-letter-exchange", k_DeadLetterExchange } 
+            //    });
+            //_channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+        }
+
+        private void InitializeRabbitMQConnection()
+        {
+            for (int i = 0; i < k_MaxRetries; i++)
+            {
+                try
                 {
-                    { "x-dead-letter-exchange", k_DeadLetterExchange } 
-                });
-            _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+                    _connection = _factory.CreateConnection();
+                    _channel = _connection.CreateModel();
 
+                    _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
+
+                    _channel.QueueDeclare(
+                        queue: k_QueueName,
+                        durable: true,
+                        exclusive: false,
+                        autoDelete: false,
+                        arguments: new Dictionary<string, object>
+                        {
+                    { "x-dead-letter-exchange", k_DeadLetterExchange }
+                        });
+                    _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+
+                    Console.WriteLine("Connection to RabbitMQ established successfully.");
+                    return;
+                }
+                catch (BrokerUnreachableException ex)
+                {
+                    Console.WriteLine($"RabbitMQ connection failed on attempt {i + 1}/{k_MaxRetries}. Retrying in {k_DelayMs / 1000}s...");
+                    Thread.Sleep(k_DelayMs);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"An unexpected error occurred during connection: {ex.Message}");
+                    throw;
+                }
+            }
+            throw new Exception("Failed to connect to RabbitMQ after maximum retries.");
         }
 
         public void DeclareQueue()
@@ -65,9 +112,9 @@ namespace OrderService.BackgroundServices
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var consumer = new EventingBasicConsumer(_channel);
+            var consumer = new AsyncEventingBasicConsumer(_channel);
 
-            consumer.Received += (model, eventArg) =>
+            consumer.Received += async (model, eventArg) =>
             {
                 var body = eventArg.Body.ToArray(); // body of the message (Order in JSON), in byte array 
                 var message = Encoding.UTF8.GetString(body);
@@ -82,6 +129,7 @@ namespace OrderService.BackgroundServices
                     _channel.BasicNack(deliveryTag: eventArg.DeliveryTag, multiple: false, requeue: false); // Acknowledge that the message was NOT recieved
                 }
 
+                await Task.Yield();
             };
 
             _channel.BasicConsume(queue: k_QueueName, autoAck: false, consumer: consumer);
@@ -109,10 +157,12 @@ namespace OrderService.BackgroundServices
 
         public override void Dispose()
         {
-            try { _channel?.Close(); } catch { }
-            try { _connection?.Close(); } catch { }
-            _channel?.Close();
-            _connection?.Close();
+            try 
+            { 
+                _channel?.Close(); 
+                _connection?.Close(); 
+            } 
+            catch { }
             base.Dispose();
         }
     }

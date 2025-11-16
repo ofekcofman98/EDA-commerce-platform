@@ -6,7 +6,10 @@ COPY ["Shared.Contracts/Shared.Contracts.csproj", "Shared.Contracts/"]
 
 RUN dotnet restore "OrderService/OrderService.csproj"
 
-COPY . .
+#COPY . .
+COPY OrderService/ OrderService/
+COPY Shared.Contracts/ Shared.Contracts/
+
 WORKDIR /src/OrderService
 
 RUN dotnet build "OrderService.csproj" -c Release -o /app/build
