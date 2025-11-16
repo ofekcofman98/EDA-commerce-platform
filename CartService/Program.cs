@@ -13,14 +13,22 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-builder.Services.AddSingleton(new ConnectionFactory { HostName = "localhost" });
+// RabbitMQ
+builder.Services.AddSingleton(new ConnectionFactory
+{
+    HostName = "localhost",
+    UserName = "guest",
+    Password = "guest",
+    DispatchConsumersAsync = true
+});
 builder.Services.AddSingleton<IEventProducer, RabbitMQPublisher>();
 
+// Generators
 builder.Services.AddScoped<IOrderGenerator, RandomOrderGenerator>();
 builder.Services.AddScoped<IItemGenerator, RandomItemGenerator>();
 
+// Services
 builder.Services.AddScoped<IOrderCreationService, OrderCreationService>();
-
 
 
 var app = builder.Build();
@@ -33,9 +41,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

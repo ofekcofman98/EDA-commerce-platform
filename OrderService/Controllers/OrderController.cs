@@ -23,13 +23,10 @@ namespace OrderService.Controllers
 
             if (orderDetails == null)
             {
-                return BadRequest(new { error = "Order Not Found" });
+                return NotFound(new { error = "Order Not Found" });
             }
 
-            else
-            {
-                return Ok(orderDetails);
-            }
+            return Ok(orderDetails);
         }
     }
 }

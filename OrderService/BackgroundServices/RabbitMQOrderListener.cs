@@ -24,6 +24,9 @@ namespace OrderService.BackgroundServices
         private IConnection? _connection;
         private IModel? _channel;
 
+        private const string k_ExchangeName = "orders.exchange";
+        private const string k_QueueName = "orders.queue";
+
         public RabbitMQOrderListener(IOrderRepository i_Repository, ConnectionFactory i_Factory)
         {
             _repository = i_Repository;
@@ -31,7 +34,10 @@ namespace OrderService.BackgroundServices
             _connection = i_Factory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            //_channel.ExchangeDeclare(exchange: "orderExchange", type: ExchangeType.Fanout);
+            _channel.ExchangeDeclare(exchange: "orderExchange", type: ExchangeType.Fanout); // ? not the responsibility?
+
+            _channel.QueueDeclare(queue: k_QueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+            _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
 
         }
 
@@ -39,7 +45,7 @@ namespace OrderService.BackgroundServices
         {
             string queueName = _channel.QueueDeclare().QueueName;
 
-            _channel.QueueDeclare(queue: "orderQueue",
+            _channel.QueueDeclare(queue: k_QueueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
@@ -60,7 +66,6 @@ namespace OrderService.BackgroundServices
                 {
                     ProcessOrderEvent(message);
                     _channel.BasicAck(deliveryTag: eventArg.DeliveryTag, multiple: false); // Acknowledge that the message was recieved
-                    Console.WriteLine($" [x] Received {message}");
                 }
                 catch (Exception ex)
                 {
@@ -94,6 +99,8 @@ namespace OrderService.BackgroundServices
 
         public override void Dispose()
         {
+            try { _channel?.Close(); } catch { }
+            try { _connection?.Close(); } catch { }
             _channel?.Close();
             _connection?.Close();
             base.Dispose();

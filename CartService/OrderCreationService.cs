@@ -11,10 +11,14 @@ namespace CartService
         private readonly IOrderGenerator _orderGenerator;
         private readonly IItemGenerator _itemGenerator;
 
-        public OrderCreationService(IOrderGenerator i_OrderGenerator, IItemGenerator i_ItemGenerator)
+        private readonly IEventProducer _producer;
+
+
+        public OrderCreationService(IOrderGenerator i_OrderGenerator, IItemGenerator i_ItemGenerator, IEventProducer producer)
         {
             _orderGenerator = i_OrderGenerator;
             _itemGenerator = i_ItemGenerator;
+            _producer = producer;
         }
 
         public ServiceResponse CreateNewOrder(CreateOrderRequest i_Request)
@@ -34,6 +38,8 @@ namespace CartService
             {
                 return new ServiceResponse { IsSuccesful = false, ErrorMessage = itemResult.ErrorMessage };
             }
+
+            _producer.PublishOrder(newOrder);
 
             return new ServiceResponse 
             { 

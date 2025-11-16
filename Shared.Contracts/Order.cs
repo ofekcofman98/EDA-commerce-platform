@@ -15,11 +15,13 @@ namespace Shared.Contracts
         public string CustomerId { get; set; }
         public DateTime OrderDate { get; set; }
         public List<Item> Items { get; set; }
-        public decimal TotalAmount { get; set; }//=> Items?.Sum(item => item.quantity * item.price) ?? 0;
+        public decimal TotalAmount { get; set; }
         public string Currency { get; set; }
         
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public OrderStatus Status { get; set; }
+        public Order() { }
+
         public Order(CreateOrderRequest i_Request)
         {
             OrderId = i_Request.orderId;

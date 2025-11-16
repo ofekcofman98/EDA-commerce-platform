@@ -17,20 +17,24 @@ namespace CartService
         private IModel? _channel;
 
         private const string k_ExchangeName = "orders_exchange";
+        private const string k_QueueName = "orders.queue";
 
         public RabbitMQPublisher(ConnectionFactory i_Factory)
         {
             _connection = i_Factory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            _channel.ExchangeDeclare(exchange: "orderExchange", type: ExchangeType.Fanout);
+            _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
+            DeclareQueue();
+            _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+
         }
 
         public void DeclareQueue()
         {
             string queueName = _channel.QueueDeclare().QueueName;
 
-            _channel.QueueDeclare(queue: "orderQueue",
+            _channel.QueueDeclare(queue: k_QueueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
@@ -49,8 +53,11 @@ namespace CartService
                 basicProperties: null,
                 body: body);
         }
+
         public void Dispose()
         {
+            try { _channel?.Close(); } catch { }
+            try { _connection?.Close(); } catch { }
             _connection?.Close();
             _channel?.Close();
         }

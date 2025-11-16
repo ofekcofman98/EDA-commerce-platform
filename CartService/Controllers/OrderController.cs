@@ -23,11 +23,14 @@ namespace CartService.Controllers
 
             if (result.IsSuccesful)
             {
-                return CreatedAtAction(
-                    actionName: "GetOrderDetials",
-                    routeValues: new { orderId = result.OrderId},
-                    value: result.Order
-                    );
+
+                return Created($"api/orders/{result.OrderId}", result.Order);
+
+                //return CreatedAtAction(
+                //    actionName: "GetOrderDetials",
+                //    routeValues: new { orderId = result.OrderId},
+                //    value: result.Order
+                //    );
             }
             else
             {
