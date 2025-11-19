@@ -29,6 +29,9 @@ namespace CartService.Producer
             DeclareQueue();
             _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
 
+            _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);
+            _channel.QueueDeclare(queue: $"{k_QueueName}.dead", durable: true, exclusive: false, autoDelete: false);
+            _channel.QueueBind(queue: $"{k_QueueName}.dead", exchange: k_DeadLetterExchange, routingKey: "");
         }
 
         public void DeclareQueue()

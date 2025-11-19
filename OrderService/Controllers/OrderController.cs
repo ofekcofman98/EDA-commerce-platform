@@ -5,8 +5,8 @@ using Shared.Contracts;
 
 namespace OrderService.Controllers
 {
-    [Route("api/orders")]
     [ApiController]
+    [Route("order-details")]
     public class OrderController : ControllerBase
     {
         private readonly IOrderRepository _orderRepository;
@@ -17,9 +17,9 @@ namespace OrderService.Controllers
         }
 
         [HttpGet(Name = "order-details")]
-        public IActionResult GetOrder(string i_OrderId)
+        public IActionResult GetOrder(string orderId)
         {
-            OrderDetails? orderDetails = _orderRepository.GetById(i_OrderId);
+            OrderDetails? orderDetails = _orderRepository.GetById(orderId);
 
             if (orderDetails == null)
             {

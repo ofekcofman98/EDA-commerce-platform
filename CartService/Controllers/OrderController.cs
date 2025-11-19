@@ -6,8 +6,8 @@ using Shared.Contracts;
 
 namespace CartService.Controllers
 {
-    [Route("api/orders")]
     [ApiController]
+    [Route("create-order")]
     public class OrderController : ControllerBase
     {
         private readonly IOrderCreationService _orderCreationService;

@@ -6,8 +6,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Text;
 using Shared.Contracts;
-using OrderService.ShippingCost;
 using RabbitMQ.Client.Exceptions;
+using OrderService.ShippingCost.ShippingCost;
 
 namespace OrderService.BackgroundServices
 {
@@ -52,9 +52,14 @@ namespace OrderService.BackgroundServices
                     _channel = _connection.CreateModel();
 
                     _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
-                    _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Direct);
                     DeclareQueue();
                     _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+                    
+                    
+                    _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);
+                    _channel.QueueDeclare(queue: $"{k_QueueName}.dead", durable: true, exclusive: false, autoDelete: false);
+                    _channel.QueueBind(queue: $"{k_QueueName}.dead", exchange: k_DeadLetterExchange, routingKey: "");
+
 
                     Console.WriteLine("Connection to RabbitMQ established successfully.");
                     return;
@@ -85,7 +90,7 @@ namespace OrderService.BackgroundServices
                             { "x-dead-letter-exchange", k_DeadLetterExchange }
                 });
         }
-
+        
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var consumer = new AsyncEventingBasicConsumer(_channel);

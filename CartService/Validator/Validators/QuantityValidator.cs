@@ -10,7 +10,7 @@ namespace CartService.Validator.Validators
             {
                 return ValidationResult.Failure("No object found");
             }
-            else if (!(i_Item.quantity >= 0))
+            else if (i_Item.quantity <= 0)
             {
                 return ValidationResult.Failure("Quantity must be greater than 0");
             }

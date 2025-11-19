@@ -3,7 +3,19 @@ Name: Ofek Cofman
 ID: 209395524
 
 2. 
-URL:
+APIs:
+
+Producer (CartService)
+  POST http://localhost:8080/create-order
+  Body (JSON):
+  {
+    "orderId": "<string>",
+    "numOfItems": <int>
+  }
+
+Consumer (OrderService)
+GET http://localhost:8081/order-details?orderId=<ORDER_ID>
+
 
 3.
 The type of exchange I chose is fanout, 
