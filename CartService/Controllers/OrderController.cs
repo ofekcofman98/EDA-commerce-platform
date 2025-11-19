@@ -24,7 +24,7 @@ namespace CartService.Controllers
 
             if (result.IsSuccesful)
             {
-                return Created($"api/orders/{result.OrderId}", result.Order);
+                return Created($"/create-order/{result.OrderId}", result.Order);
             }
             else
             {

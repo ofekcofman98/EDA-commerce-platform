@@ -2,7 +2,7 @@
 
 namespace CartService.Validator.Validators
 {
-    public class CustomerIdValidator : BaseValidator<Order>
+    public class OrderIdValidator : BaseValidator<Order>
     {
         public override ValidationResult Handle(Order i_Order)
         {
@@ -11,14 +11,12 @@ namespace CartService.Validator.Validators
                 return ValidationResult.Failure("No order found");
             }
 
-            else if (i_Order.CustomerId == null)
+            else if (string.IsNullOrWhiteSpace(i_Order.OrderId))
             {
-                return ValidationResult.Failure("CustomerID is null");
+                return ValidationResult.Failure("OrderId can't be empty");
             }
 
             return base.Handle(i_Order);
         }
-
-
     }
 }

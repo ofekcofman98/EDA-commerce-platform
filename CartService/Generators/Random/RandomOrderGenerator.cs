@@ -11,7 +11,7 @@ namespace CartService.Generators.Random
             Order order = base.GenerateOrder(i_Request, i_Items);
 
             order.CustomerId = randomCustomerId();
-            order.Currency = "USD";
+            order.Currency = randomCurrency();
             
             return order;
         }
@@ -19,6 +19,13 @@ namespace CartService.Generators.Random
         private string randomCustomerId()
         {
             return $"CUST-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+        }
+        
+        private string randomCurrency()
+        {
+            var array = Currencies.s_AllowedCurrencies.ToArray();
+            int index = Rnd.Next(array.Length);
+            return array[index];
         }
 
     }

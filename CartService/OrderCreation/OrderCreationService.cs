@@ -24,6 +24,11 @@ namespace CartService.OrderCreation
 
         public ServiceResponse CreateNewOrder(CreateOrderRequest i_Request)
         {
+            if (i_Request.numOfItems <= 0)
+            {
+                return new ServiceResponse { IsSuccesful = false, ErrorMessage = "numOfItems must be greater than 0"};
+            }
+
             ServiceResponse response = new ServiceResponse();
 
             Order newOrder = generateOrder(i_Request);
@@ -91,12 +96,16 @@ namespace CartService.OrderCreation
 
         private IValidator<Order> buildOrderValidationChain()
         {
-            IValidator<Order> validator1 = new CustomerIdValidator();
-            IValidator<Order> validator2 = new TotalAmountValidator();
-            IValidator<Order> validator3 = new UniqueItemIdValidator();
+            IValidator<Order> validator1 = new OrderIdValidator();
+            IValidator<Order> validator2 = new CustomerIdValidator();
+            IValidator<Order> validator3 = new TotalAmountValidator();
+            IValidator<Order> validator4 = new UniqueItemIdValidator();
+            IValidator<Order> validator5 = new CurrencyValidator();
 
             validator1.SetNext(validator2);
             validator2.SetNext(validator3);
+            validator3.SetNext(validator4);
+            validator4.SetNext(validator5);
 
             return validator1;
         }

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Text;
 using Shared.Contracts;
 using RabbitMQ.Client.Exceptions;
-using OrderService.ShippingCost.ShippingCost;
+using OrderService.ShippingCost;
 
 namespace OrderService.BackgroundServices
 {

@@ -23,7 +23,9 @@ because the order details must be broadcast to multiple downstream services,
 so all the queues will recieve the message and all the services as well.
 
 4. 
-?
+For a fanout exchange there is no meaningful binding key.
+The queue is bound with an empty string ("") as the binding key, but fanout exchanges ignore the routing key and deliver every message to all bound queues.
+So effectively there is no logical binding key used for routing.
 
 5. 
 The producer declares the exchange because ___.
