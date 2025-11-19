@@ -11,7 +11,7 @@ namespace Shared.Contracts
 {
     public class Order
     {
-        public string OrderId { get; private set; }
+        public string OrderId { get; set; }
         public string CustomerId { get; set; }
         public DateTime OrderDate { get; set; }
         public List<Item> Items { get; set; }

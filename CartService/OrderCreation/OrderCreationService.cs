@@ -40,6 +40,7 @@ namespace CartService.OrderCreation
                 return new ServiceResponse { IsSuccesful = false, ErrorMessage = itemResult.ErrorMessage };
             }
 
+            // ok 
             _producer.PublishOrder(newOrder);
 
             return new ServiceResponse

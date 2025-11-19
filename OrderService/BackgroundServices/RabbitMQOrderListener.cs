@@ -27,36 +27,19 @@ namespace OrderService.BackgroundServices
         private IModel? _channel;
         private readonly ConnectionFactory _factory;
 
-
         private const int k_MaxRetries = 15;
         private const int k_DelayMs = 5000; 
                                             
         private const string k_ExchangeName = RabbitMQConstants.ExchangeName;
         private const string k_QueueName = RabbitMQConstants.QueueName;
-        private const string k_DeadLetterExchange = "dlx_orders";
+        private const string k_DeadLetterExchange = RabbitMQConstants.DeadLetterExchangeName;
 
         public RabbitMQOrderListener(IOrderRepository i_Repository, ConnectionFactory i_Factory)
         {
             _repository = i_Repository;
-            //_connection = i_Factory.CreateConnection();
-            //_channel = _connection.CreateModel();
             _factory = i_Factory;
 
             InitializeRabbitMQConnection();
-
-            //_channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout); // ? not the responsibility?
-            //_channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Direct);
-
-            //_channel.QueueDeclare(
-            //    queue: k_QueueName,
-            //    durable: true,
-            //    exclusive: false,
-            //    autoDelete: false,
-            //    arguments: new Dictionary<string, object>
-            //    {
-            //        { "x-dead-letter-exchange", k_DeadLetterExchange } 
-            //    });
-            //_channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
         }
 
         private void InitializeRabbitMQConnection()
@@ -69,16 +52,8 @@ namespace OrderService.BackgroundServices
                     _channel = _connection.CreateModel();
 
                     _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
-
-                    _channel.QueueDeclare(
-                        queue: k_QueueName,
-                        durable: true,
-                        exclusive: false,
-                        autoDelete: false,
-                        arguments: new Dictionary<string, object>
-                        {
-                    { "x-dead-letter-exchange", k_DeadLetterExchange }
-                        });
+                    _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Direct);
+                    DeclareQueue();
                     _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
 
                     Console.WriteLine("Connection to RabbitMQ established successfully.");
@@ -100,14 +75,15 @@ namespace OrderService.BackgroundServices
 
         public void DeclareQueue()
         {
-            string queueName = _channel.QueueDeclare().QueueName;
-
-            _channel.QueueDeclare(queue: k_QueueName,
+            _channel.QueueDeclare(
+                queue: k_QueueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
-                arguments: null
-                );
+                arguments: new Dictionary<string, object>
+                {
+                            { "x-dead-letter-exchange", k_DeadLetterExchange }
+                });
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -116,17 +92,20 @@ namespace OrderService.BackgroundServices
 
             consumer.Received += async (model, eventArg) =>
             {
-                var body = eventArg.Body.ToArray(); // body of the message (Order in JSON), in byte array 
+                var body = eventArg.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
 
                 try
                 {
                     ProcessOrderEvent(message);
-                    _channel.BasicAck(deliveryTag: eventArg.DeliveryTag, multiple: false); // Acknowledge that the message was recieved
+                    _channel.BasicAck(deliveryTag: eventArg.DeliveryTag, multiple: false);
                 }
                 catch (Exception ex)
                 {
-                    _channel.BasicNack(deliveryTag: eventArg.DeliveryTag, multiple: false, requeue: false); // Acknowledge that the message was NOT recieved
+                    Console.WriteLine($"[CONSUMER FATAL ERROR] Processing failed: {ex.Message}");
+                    Console.WriteLine($"[CONSUMER FATAL ERROR] Stack Trace: {ex.StackTrace}");
+
+                    _channel.BasicNack(deliveryTag: eventArg.DeliveryTag, multiple: false, requeue: false);
                 }
 
                 await Task.Yield();
@@ -139,10 +118,17 @@ namespace OrderService.BackgroundServices
 
         private void ProcessOrderEvent(string i_MessageJson)
         {
-            Order? order = JsonSerializer.Deserialize<Order>(i_MessageJson);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            Order? order = JsonSerializer.Deserialize<Order>(i_MessageJson, options);
 
             if (order == null || order.Status != OrderStatus.New)
             {
+                Console.WriteLine($"order == null :{order == null} ");
+                Console.WriteLine($"order.Status != OrderStatus.New: {order.Status != OrderStatus.New}");
                 return;
             }
 
@@ -152,7 +138,7 @@ namespace OrderService.BackgroundServices
 
             _repository.Add(orderDetails);
 
-            //TODO: Log
+            Console.WriteLine("orderDetails added to repository!");
         }
 
         public override void Dispose()

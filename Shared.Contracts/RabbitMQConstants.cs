@@ -10,6 +10,7 @@ namespace Shared.Contracts
     {
         public const string ExchangeName = "orders.exchange";
         public const string QueueName = "orders.queue";
+        public const string DeadLetterExchangeName = "dlx_orders.exchange";
 
     }
 }

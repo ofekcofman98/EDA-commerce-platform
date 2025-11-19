@@ -18,6 +18,7 @@ namespace CartService.Producer
 
         private const string k_ExchangeName = RabbitMQConstants.ExchangeName;
         private const string k_QueueName = RabbitMQConstants.QueueName;
+        private const string k_DeadLetterExchange = RabbitMQConstants.DeadLetterExchangeName;
 
         public RabbitMQPublisher(ConnectionFactory i_Factory)
         {
@@ -32,14 +33,17 @@ namespace CartService.Producer
 
         public void DeclareQueue()
         {
-            string queueName = _channel.QueueDeclare().QueueName;
+            //string queueName = _channel.QueueDeclare().QueueName;
 
-            _channel.QueueDeclare(queue: k_QueueName,
+            _channel.QueueDeclare(
+                queue: k_QueueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
-                arguments: null
-                );
+                arguments: new Dictionary<string, object>
+                {
+                            { "x-dead-letter-exchange", k_DeadLetterExchange }
+                });
         }
 
         public void PublishOrder(Order order)

@@ -10,20 +10,31 @@ namespace OrderService.Data
         public void Add(OrderDetails i_OrderDetails)
         {
             _orderDetailsMap.TryAdd(i_OrderDetails.Order.OrderId, i_OrderDetails);
-
-            //decimal shippingCost = ShippingCostService.CalculateShippingCost(i_Order);
-            //OrderDetails orderDetails = new OrderDetails(i_Order, shippingCost);
-            //OrderDetailsList.Add(orderDetails);
         }
         
         public OrderDetails? GetById(string i_OrderId)
         {
+            Console.WriteLine($"Starting GetById({i_OrderId})");
+
             if (_orderDetailsMap.TryGetValue(i_OrderId, out OrderDetails? o_OrderDetails))
             {
                 return o_OrderDetails;
             }
 
             return null;
+        }
+
+        public void PrintAllOrderIds() 
+        {
+            Console.WriteLine("All orders:");
+            if (_orderDetailsMap != null)
+            {
+                foreach (var od in _orderDetailsMap.Values)
+                {
+                    Console.WriteLine($"orderId: {od.Order.OrderId}");
+                }
+            }
+
         }
     }
 }
