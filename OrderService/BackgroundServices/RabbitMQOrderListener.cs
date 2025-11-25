@@ -51,14 +51,14 @@ namespace OrderService.BackgroundServices
                     _connection = _factory.CreateConnection();
                     _channel = _connection.CreateModel();
 
-                    _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
+                    //_channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
                     DeclareQueue();
                     _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
-                    
-                    
-                    _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);
-                    _channel.QueueDeclare(queue: $"{k_QueueName}.dead", durable: true, exclusive: false, autoDelete: false);
-                    _channel.QueueBind(queue: $"{k_QueueName}.dead", exchange: k_DeadLetterExchange, routingKey: "");
+
+
+                    //_channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);
+                    //_channel.QueueDeclare(queue: $"{k_QueueName}.dead", durable: true, exclusive: false, autoDelete: false);
+                    //_channel.QueueBind(queue: $"{k_QueueName}.dead", exchange: k_DeadLetterExchange, routingKey: "");
 
 
                     Console.WriteLine("Connection to RabbitMQ established successfully.");
