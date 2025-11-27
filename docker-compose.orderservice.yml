@@ -1,27 +1,30 @@
 version: '3.8'
 
+#docker-compose.orderservice.yml
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq-order
-    hostname: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: rabbitmq-order
+  #   hostname: rabbitmq
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: user
+  #     RABBITMQ_DEFAULT_PASS: password
+  #   healthcheck:
+  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
   orderservice:
     container_name: orderservice
     build:
       context: .                 
       dockerfile: OrderService/Dockerfile
+    networks:
+      - eda_net    
     environment:
       ASPNETCORE_URLS: http://0.0.0.0:8081
       RabbitMQ__HostName: rabbitmq
@@ -30,6 +33,7 @@ services:
       RabbitMQ__Port: "5672"
     ports:
       - "8081:8081"
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
+
+networks:
+  eda_net:
+    external: true

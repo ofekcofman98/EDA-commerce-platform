@@ -1,9 +1,10 @@
-version: '3.8'
+# version: '3.8'
 
+# docker-compose.cartservice.yml
 services:
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: rabbitmq-cart
+    container_name: rabbitmq
     hostname: rabbitmq
     ports:
       - "5672:5672"
@@ -16,6 +17,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - eda_net
 
   cartservice:
     container_name: cartservice
@@ -33,3 +36,10 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - eda_net
+
+networks:
+  eda_net:
+    external: true
+    name: eda-net
