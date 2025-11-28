@@ -30,9 +30,11 @@ namespace OrderService.BackgroundServices
         private const int k_MaxRetries = 15;
         private const int k_DelayMs = 5000; 
                                             
-        private const string k_ExchangeName = RabbitMQConstants.ExchangeName;
-        private const string k_QueueName = RabbitMQConstants.QueueName;
-        private const string k_DeadLetterExchange = RabbitMQConstants.DeadLetterExchangeName;
+        private const string k_ExchangeName = RabbitMQConstants.Exchange.Orders;
+        private const string k_QueueName = RabbitMQConstants.Queue.Orders;
+        private const string k_DeadLetterExchange = RabbitMQConstants.Exchange.DeadLetter;
+        private const string k_RoutingKey = RabbitMQConstants.RoutingKey.NewOrder;
+        private const string k_BindingKey = RabbitMQConstants.BindingKey.NewOrder;
 
         public RabbitMQOrderListener(IOrderRepository i_Repository, ConnectionFactory i_Factory)
         {
@@ -53,7 +55,7 @@ namespace OrderService.BackgroundServices
 
                     //_channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
                     DeclareQueue();
-                    _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+                    _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: k_BindingKey);
 
 
                     //_channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);

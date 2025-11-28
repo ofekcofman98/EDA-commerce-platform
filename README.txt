@@ -1,33 +1,44 @@
-1. 
+(1) 
 Name: Ofek Cofman
 ID: 209395524
 
-2. 
+################################
+
+(2) 
 APIs:
 
 Producer (CartService)
   POST http://localhost:8080/create-order
   Body (JSON):
-  {
-    "orderId": "<string>",
-    "numOfItems": <int>
-  }
+{
+  "orderId": "1234",
+  "numOfItems": 3
+}
 
 Consumer (OrderService)
-GET http://localhost:8081/order-details?orderId=<ORDER_ID>
+GET http://localhost:8081/order-details?orderId=1234
 
 
-3.
-The type of exchange I chose is fanout, 
-because the order details must be broadcast to multiple downstream services,
-so all the queues will recieve the message and all the services as well.
+################################
 
-4. 
-For a fanout exchange there is no meaningful binding key.
-The queue is bound with an empty string ("") as the binding key, but fanout exchanges ignore the routing key and deliver every message to all bound queues.
-So effectively there is no logical binding key used for routing.
+(3)
+A topic exchange supports both broadcasting the event to multiple consumers and filtering based on routing patterns.
+It forwards each message to all queues whose binding key matches the routing key.
+This allows multiple downstream services to receive the order event, while still allowing each consumer to filter only the messages relevant to it.
+Since the Order Service should receive only new orders, its binding pattern must match routing keys that represent new-order events.
 
-5. 
-The producer declares the exchange because ___.
-Both services declare the queue because they are different applications in different projects, 
-and neither of them can assume the queue exists.
+
+################################
+
+(4)
+Yes, there is a binding key on the consumer: "#.new".
+The producer publishes all new-order events using the routing key: "order.new"
+The binding key "#.new" matches any routing key that ends with ".new",
+so the consumer receives only new order events, and ignores any other types of events that may be added in the future.
+
+################################
+
+(5)
+The producer declares the exchange because it is responsible for delivering the message, and it needs the exchange to publish the message.
+Both services declare the queue, because each application is deployed independently and cannot assume that the queue already exists.
+Queue declaration in RabbitMQ is idempotent, so declaring it from both sides is safe and ensures the queue always exists for both publishing and consuming.

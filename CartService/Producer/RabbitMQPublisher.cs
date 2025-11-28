@@ -16,20 +16,26 @@ namespace CartService.Producer
         private IConnection? _connection;
         private IModel? _channel;
 
-        private const string k_ExchangeName = RabbitMQConstants.ExchangeName;
-        private const string k_QueueName = RabbitMQConstants.QueueName;
-        private const string k_DeadLetterExchange = RabbitMQConstants.DeadLetterExchangeName;
+        private const string k_ExchangeName = RabbitMQConstants.Exchange.Orders;
+        private const string k_QueueName = RabbitMQConstants.Queue.Orders;
+        private const string k_DeadLetterExchange = RabbitMQConstants.Exchange.DeadLetter;
+        private const string k_RoutingKey = RabbitMQConstants.RoutingKey.NewOrder;
 
         public RabbitMQPublisher(ConnectionFactory i_Factory)
         {
             _connection = i_Factory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout);
+            //_channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Fanout); //28.11
+            _channel.ExchangeDeclare(exchange: k_ExchangeName, type: ExchangeType.Topic, durable: true, autoDelete: false);
+
             DeclareQueue();
-            _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+
+            //_channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: "");
+            _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: k_RoutingKey);
 
             _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);
+         
             _channel.QueueDeclare(queue: $"{k_QueueName}.dead", durable: true, exclusive: false, autoDelete: false);
             _channel.QueueBind(queue: $"{k_QueueName}.dead", exchange: k_DeadLetterExchange, routingKey: "");
         }
@@ -45,7 +51,7 @@ namespace CartService.Producer
                 autoDelete: false,
                 arguments: new Dictionary<string, object>
                 {
-                            { "x-dead-letter-exchange", k_DeadLetterExchange }
+                    { "x-dead-letter-exchange", k_DeadLetterExchange }
                 });
         }
 
@@ -56,7 +62,7 @@ namespace CartService.Producer
 
             _channel.BasicPublish(
                 exchange: k_ExchangeName,
-                routingKey: "",
+                routingKey: k_RoutingKey,
                 basicProperties: null,
                 body: body);
         }
