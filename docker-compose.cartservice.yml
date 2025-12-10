@@ -1,0 +1,43 @@
+# docker-compose.cartservice.yml
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eda_net
+
+  cartservice:
+    container_name: cartservice
+    build:
+      context: .                 
+      dockerfile: CartService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: user
+      RabbitMQ__Password: password
+      RabbitMQ__Port: "5672"
+    ports:
+      - "8080:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - eda_net
+
+networks:
+  eda_net:
+    name: eda-net 

@@ -1,0 +1,14 @@
+# VS / build
+.vs/
+bin/
+obj/
+*.user
+*.suo
+
+# Cart / Order / Shared projects
+CartService/bin/
+CartService/obj/
+OrderService/bin/
+OrderService/obj/
+Shared.Contracts/bin/
+Shared.Contracts/obj/

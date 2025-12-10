@@ -1,0 +1,26 @@
+# docker-compose.orderservice.yml
+
+services:
+  orderservice:
+    container_name: orderservice
+    build:
+      context: .                 
+      dockerfile: OrderService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8081
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: user
+      RabbitMQ__Password: password
+      RabbitMQ__Port: "5672"
+    ports:
+      - "8081:8081"
+    networks:
+      - eda_net    
+
+networks:
+  eda_net:
+    external: true
+    name: eda-net 
+
+
+
