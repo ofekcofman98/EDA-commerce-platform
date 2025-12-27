@@ -4,10 +4,11 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace Shared.Contracts
+namespace Shared.Contracts.Orders
 {
     public class Order
     {
@@ -17,7 +18,7 @@ namespace Shared.Contracts
         public List<Item> Items { get; set; }
         public decimal TotalAmount { get; set; }
         public string Currency { get; set; }
-        
+
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public OrderStatus Status { get; set; }
         public Order() { }

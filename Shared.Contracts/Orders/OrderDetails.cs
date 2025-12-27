@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Shared.Contracts
+namespace Shared.Contracts.Orders
 {
     public class OrderDetails
     {
@@ -13,8 +13,8 @@ namespace Shared.Contracts
 
         public OrderDetails(Order i_Order, decimal i_ShippingCost)
         {
-            this.Order = i_Order;
-            this.shippingCost = i_ShippingCost;
+            Order = i_Order;
+            shippingCost = i_ShippingCost;
         }
     }
 }

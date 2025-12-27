@@ -1,4 +1,4 @@
-﻿using Shared.Contracts;
+﻿using Shared.Contracts.Orders;
 using System.Collections.Concurrent;
 
 namespace OrderService.Data

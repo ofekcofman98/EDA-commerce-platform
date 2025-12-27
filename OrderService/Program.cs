@@ -1,5 +1,6 @@
 ﻿using OrderService.BackgroundServices;
 using OrderService.Data;
+using OrderService.OrderHandling;
 using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,16 +27,12 @@ builder.Services.AddSingleton<ConnectionFactory>(_ =>
     };
 });
 
+builder.Services.AddScoped<IOrderEventHandler, OrderCreatedHandler>();
+builder.Services.AddScoped<IOrderEventHandler, OrderUpdatedHandler>();
+
 
 builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
 
-//builder.Services.AddSingleton(new ConnectionFactory
-//{
-//    HostName = "localhost",
-//    UserName = "guest",
-//    Password = "guest",
-//    DispatchConsumersAsync = true
-//});
 
 builder.Services.AddHostedService<RabbitMQOrderListener>();
 

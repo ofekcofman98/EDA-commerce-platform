@@ -1,4 +1,4 @@
-﻿using Shared.Contracts;
+﻿using Shared.Contracts.Orders;
 
 namespace CartService.Data
 {
@@ -6,5 +6,7 @@ namespace CartService.Data
     {
         bool Exists(string orderId);
         void Add(Order order);
+        Order? GetById(string i_OrderId);
+
     }
 }

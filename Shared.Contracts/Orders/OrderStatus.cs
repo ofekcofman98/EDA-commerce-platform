@@ -4,14 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Shared.Contracts
+namespace Shared.Contracts.Orders
 {
     public enum OrderStatus
     {
         New,
         Pending,
         Confirmed,
-        Shipped, 
+        Shipped,
         Cancelled,
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Shared.Contracts;
+using Shared.Contracts.Orders;
 
 namespace CartService.Generators
 {

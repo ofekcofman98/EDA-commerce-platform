@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text;
 using Shared.Contracts;
+using Shared.Contracts.Events;
 
 namespace CartService.Producer
 {
@@ -19,7 +20,6 @@ namespace CartService.Producer
         private const string k_ExchangeName = RabbitMQConstants.Exchange.Orders;
         private const string k_QueueName = RabbitMQConstants.Queue.Orders;
         private const string k_DeadLetterExchange = RabbitMQConstants.Exchange.DeadLetter;
-        private const string k_RoutingKey = RabbitMQConstants.RoutingKey.NewOrder;
 
         public RabbitMQPublisher(ConnectionFactory i_Factory)
         {
@@ -30,7 +30,7 @@ namespace CartService.Producer
 
             DeclareQueue();
 
-            _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: k_RoutingKey);
+            _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: RabbitMQConstants.BindingKey.AllOrders);
 
             _channel.ExchangeDeclare(exchange: k_DeadLetterExchange, type: ExchangeType.Fanout, durable: true, autoDelete: false);
          
@@ -51,16 +51,25 @@ namespace CartService.Producer
                 });
         }
 
-        public void PublishOrder(Order order)
+        public Task PublishAsync(EventEnvelope eventEnvelope)
         {
-            string message = JsonSerializer.Serialize(order);
+            string message = JsonSerializer.Serialize(eventEnvelope);
             byte[] body = Encoding.UTF8.GetBytes(message);
+
+            string routingKey = eventEnvelope.EventType switch
+            {
+                EventType.OrderCreated => RabbitMQConstants.RoutingKey.OrderCreated,
+                EventType.OrderUpdated => RabbitMQConstants.RoutingKey.OrderUpdated,
+                _ => RabbitMQConstants.RoutingKey.AllOrders
+            };
 
             _channel.BasicPublish(
                 exchange: k_ExchangeName,
-                routingKey: k_RoutingKey,
+                routingKey: routingKey,
                 basicProperties: null,
                 body: body);
+
+            return Task.CompletedTask;
         }
 
         public void Dispose()

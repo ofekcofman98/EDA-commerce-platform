@@ -8,6 +8,9 @@ using CartService.Data;
 using CartService.Validator.Validators.OrderValidators;
 using CartService.Validator.Validators.ItemValidators;
 using CartService.Validator.Validators.OrderRequestsValidators;
+using Shared.Contracts.Events;
+using Shared.Contracts.Orders;
+using System.Text.Json;
 
 namespace CartService.OrderCreation
 {
@@ -51,7 +54,15 @@ namespace CartService.OrderCreation
             }
 
             _orderRepository.Add(newOrder);
-            _producer.PublishOrder(newOrder);
+
+            var envelope = new EventEnvelope
+            {
+                EventType = EventType.OrderCreated,
+                OrderId = newOrder.OrderId,
+                Payload = JsonSerializer.SerializeToElement(newOrder)
+            };
+
+            _producer.PublishAsync(envelope);
 
             return new ServiceResponse
             {

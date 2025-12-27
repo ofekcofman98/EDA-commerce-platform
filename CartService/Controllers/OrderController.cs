@@ -1,4 +1,5 @@
 ﻿using CartService.OrderCreation;
+using CartService.OrderUpdate;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
@@ -11,10 +12,12 @@ namespace CartService.Controllers
     public class OrderController : ControllerBase
     {
         private readonly IOrderCreationService _orderCreationService;
+        private readonly IOrderUpdateService _orderUpdateService;
 
-        public OrderController(IOrderCreationService i_OrderCreationService)
+        public OrderController(IOrderCreationService i_OrderCreationService, IOrderUpdateService i_OrderUpdateService)
         {
             _orderCreationService = i_OrderCreationService;
+            _orderUpdateService = i_OrderUpdateService;
         }
 
         [HttpPost(Name = "create-order")]
@@ -29,6 +32,21 @@ namespace CartService.Controllers
             else
             {
                 return BadRequest(new { error = "Validation Failed", detail = result.ErrorMessage });
+            }
+        }
+
+        [HttpPut(Name = "update-order")]
+        public async Task<IActionResult> UpdateOrder([FromBody] UpdateOrderRequest i_Request)
+        {
+            var response = await _orderUpdateService.UpdateOrderStatus(i_Request);
+
+            if (response.IsSuccesful)
+            {
+                return Ok(response.Order);
+            }
+            else
+            {
+                return BadRequest(new { error = "Update Failed", detail = response.ErrorMessage });
             }
         }
 

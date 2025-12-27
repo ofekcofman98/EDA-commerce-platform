@@ -4,6 +4,7 @@ using RabbitMQ.Client;
 using CartService.Producer;
 using CartService.OrderCreation;
 using CartService.Data;
+using CartService.OrderUpdate;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,18 +15,18 @@ builder.Services.AddSwaggerGen();
 
 
 // RabbitMQ
-var rmq = builder.Configuration.GetSection("RabbitMQ");
-builder.Services.AddSingleton(new ConnectionFactory
-{
-    HostName = rmq["HostName"] ?? "localhost",
-    UserName = rmq["UserName"] ?? "guest",
-    Password = rmq["Password"] ?? "guest",
-    Port = int.TryParse(rmq["Port"], out var p) ? p : 5672,
-    DispatchConsumersAsync = true
-});
+//var rmq = builder.Configuration.GetSection("RabbitMQ");
+//builder.Services.AddSingleton(new ConnectionFactory
+//{
+//    HostName = rmq["HostName"] ?? "localhost",
+//    UserName = rmq["UserName"] ?? "guest",
+//    Password = rmq["Password"] ?? "guest",
+//    Port = int.TryParse(rmq["Port"], out var p) ? p : 5672,
+//    DispatchConsumersAsync = true
+//});
 
 // Publisher
-builder.Services.AddSingleton<IEventProducer, RabbitMQPublisher>();
+builder.Services.AddSingleton<IEventProducer, KafkaPublisher>();
 
 // In-memory Order Repository
 builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
@@ -36,7 +37,7 @@ builder.Services.AddScoped<IItemGenerator, RandomItemGenerator>();
 
 // Services
 builder.Services.AddScoped<IOrderCreationService, OrderCreationService>();
-
+builder.Services.AddScoped<IOrderUpdateService, OrderUpdateService>();
 
 var app = builder.Build();
 

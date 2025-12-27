@@ -1,4 +1,4 @@
-﻿using Shared.Contracts;
+﻿using Shared.Contracts.Orders;
 
 namespace CartService.Validator.Validators.OrderValidators
 {

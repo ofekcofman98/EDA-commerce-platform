@@ -1,9 +1,9 @@
-﻿using Shared.Contracts;
+﻿using Shared.Contracts.Events;
 
 namespace CartService.Producer
 {
     public interface IEventProducer
     {
-        void PublishOrder(Order order);
+        Task PublishAsync(EventEnvelope eventEnvelope);
     }
 }

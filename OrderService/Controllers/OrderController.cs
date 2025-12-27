@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Data;
-using Shared.Contracts;
+using Shared.Contracts.Orders;
 
 namespace OrderService.Controllers
 {
@@ -28,5 +28,19 @@ namespace OrderService.Controllers
 
             return Ok(orderDetails);
         }
+
+        [HttpGet(Name = "getAllOrderIdsFromTopic")]
+        public IActionResult GetAllOrderIdsFromTopic(string topicName)
+        {
+            var orderIds = _orderRepository.GetAllOrderIdsFromTopic(topicName);
+
+            if (orderIds == null)
+            {
+                return NotFound(new { error = "No Orders Found for the Given Topic" });
+            }
+
+            return Ok(orderIds);
+        }
+
     }
 }

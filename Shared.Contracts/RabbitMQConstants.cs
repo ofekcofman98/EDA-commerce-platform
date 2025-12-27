@@ -22,12 +22,18 @@ namespace Shared.Contracts
 
         public static class RoutingKey
         {
-            public const string NewOrder = "order.new";
+            public const string OrderCreated = "order.created";
+            public const string OrderUpdated = "order.updated";
+
+            public const string AllOrders = "order.*";
         }
 
         public static class BindingKey
         {
-            public const string NewOrder = "#.new";
+            public const string OrderCreated = "order.created";
+            public const string OrderUpdated = "order.updated";
+
+            public const string AllOrders = "order.*";
         }
 
     }

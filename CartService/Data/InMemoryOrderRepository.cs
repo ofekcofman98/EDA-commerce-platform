@@ -1,4 +1,4 @@
-﻿using Shared.Contracts;
+﻿using Shared.Contracts.Orders;
 using System.Collections.Concurrent;
 
 namespace CartService.Data
@@ -15,6 +15,16 @@ namespace CartService.Data
         public void Add(Order i_Order)
         {
             r_Orders.TryAdd(i_Order.OrderId, i_Order);
+        }
+
+        public Order? GetById(string i_OrderId)
+        {
+            if(r_Orders.TryGetValue(i_OrderId, out Order? order))
+            {
+                return order;
+            }
+
+            return null;
         }
     }
 }

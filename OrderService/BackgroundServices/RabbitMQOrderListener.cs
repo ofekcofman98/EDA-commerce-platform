@@ -8,6 +8,9 @@ using System.Text;
 using Shared.Contracts;
 using RabbitMQ.Client.Exceptions;
 using OrderService.ShippingCost;
+using Shared.Contracts.Events;
+using Shared.Contracts.Orders;
+using OrderService.OrderHandling;
 
 namespace OrderService.BackgroundServices
 {
@@ -22,10 +25,11 @@ namespace OrderService.BackgroundServices
         /// 
         /// </summary>
 
-        private readonly IOrderRepository _repository;
         private IConnection? _connection;
         private IModel? _channel;
         private readonly ConnectionFactory _factory;
+
+        private readonly Dictionary<EventType, IOrderEventHandler> _handlers;
 
         private const int k_MaxRetries = 15;
         private const int k_DelayMs = 5000; 
@@ -33,13 +37,13 @@ namespace OrderService.BackgroundServices
         private const string k_ExchangeName = RabbitMQConstants.Exchange.Orders;
         private const string k_QueueName = RabbitMQConstants.Queue.Orders;
         private const string k_DeadLetterExchange = RabbitMQConstants.Exchange.DeadLetter;
-        private const string k_RoutingKey = RabbitMQConstants.RoutingKey.NewOrder;
-        private const string k_BindingKey = RabbitMQConstants.BindingKey.NewOrder;
+        //private const string k_RoutingKey = RabbitMQConstants.RoutingKey.AllOrders;
+        private const string k_BindingKey = RabbitMQConstants.BindingKey.AllOrders;
 
-        public RabbitMQOrderListener(IOrderRepository i_Repository, ConnectionFactory i_Factory)
+        public RabbitMQOrderListener(ConnectionFactory i_Factory, IEnumerable<IOrderEventHandler> handlers)
         {
-            _repository = i_Repository;
             _factory = i_Factory;
+            _handlers = handlers.ToDictionary(h => h.EventType, h => h);
 
             InitializeRabbitMQConnection();
         }
@@ -54,7 +58,7 @@ namespace OrderService.BackgroundServices
                     _channel = _connection.CreateModel();
 
                     DeclareQueue();
-                    _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: k_BindingKey);
+                    _channel.QueueBind(queue: k_QueueName, exchange: k_ExchangeName, routingKey: RabbitMQConstants.BindingKey.AllOrders);
 
 
                     Console.WriteLine("Connection to RabbitMQ established successfully.");
@@ -124,22 +128,21 @@ namespace OrderService.BackgroundServices
                 PropertyNameCaseInsensitive = true
             };
 
-            Order? order = JsonSerializer.Deserialize<Order>(i_MessageJson, options);
+            EventEnvelope? envelope = JsonSerializer.Deserialize<EventEnvelope>(i_MessageJson, options);
 
-            if (order == null || order.Status != OrderStatus.New)
+            if (envelope == null)
             {
-                Console.WriteLine($"order == null :{order == null} ");
-                Console.WriteLine($"order.Status != OrderStatus.New: {order.Status != OrderStatus.New}");
+                Console.WriteLine("Envelope is null");
                 return;
             }
 
-            decimal shippingCost = ShippingCostService.CalculateShippingCost(order);
+            if (!_handlers.TryGetValue(envelope.EventType, out var handler))
+            {
+                Console.WriteLine($"No handler found for event type: {envelope.EventType}");
+                return;
+            }
 
-            OrderDetails orderDetails = new OrderDetails(order, shippingCost);
-
-            _repository.Add(orderDetails);
-
-            Console.WriteLine("orderDetails added to repository!");
+            handler.Handle(envelope.Payload);
         }
 
         public override void Dispose()
