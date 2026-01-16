@@ -1,0 +1,51 @@
+version: '3.8'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_listener"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cartservice:
+    container_name: cartservice
+    build:
+      context: .                 
+      dockerfile: CartService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: user
+      RabbitMQ__Password: password
+      RabbitMQ__Port: "5672"
+    ports:
+      - "8080:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  orderservice:
+    container_name: orderservice
+    build:
+      context: .                 
+      dockerfile: OrderService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8081
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: user
+      RabbitMQ__Password: password
+      RabbitMQ__Port: "5672"
+    ports:
+      - "8081:8081"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
