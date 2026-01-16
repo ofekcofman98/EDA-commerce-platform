@@ -8,7 +8,7 @@ using Shared.Contracts;
 namespace CartService.Controllers
 {
     [ApiController]
-    [Route("create-order")]
+    //[Route("create-order")]
     public class OrderController : ControllerBase
     {
         private readonly IOrderCreationService _orderCreationService;
@@ -20,7 +20,7 @@ namespace CartService.Controllers
             _orderUpdateService = i_OrderUpdateService;
         }
 
-        [HttpPost(Name = "create-order")]
+        [HttpPost("create-order")]
         public IActionResult CreateOrder([FromBody] CreateOrderRequest i_Request)
         {
             ServiceResponse result = _orderCreationService.CreateNewOrder(i_Request);
@@ -35,7 +35,7 @@ namespace CartService.Controllers
             }
         }
 
-        [HttpPut(Name = "update-order")]
+        [HttpPut("update-order")]
         public async Task<IActionResult> UpdateOrder([FromBody] UpdateOrderRequest i_Request)
         {
             var response = await _orderUpdateService.UpdateOrderStatus(i_Request);

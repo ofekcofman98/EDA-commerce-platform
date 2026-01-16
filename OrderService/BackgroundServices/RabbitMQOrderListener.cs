@@ -32,8 +32,8 @@ namespace OrderService.BackgroundServices
         private readonly Dictionary<EventType, IOrderEventHandler> _handlers;
 
         private const int k_MaxRetries = 15;
-        private const int k_DelayMs = 5000; 
-                                            
+        private const int k_DelayMs = 5000;
+
         private const string k_ExchangeName = RabbitMQConstants.Exchange.Orders;
         private const string k_QueueName = RabbitMQConstants.Queue.Orders;
         private const string k_DeadLetterExchange = RabbitMQConstants.Exchange.DeadLetter;
@@ -90,7 +90,7 @@ namespace OrderService.BackgroundServices
                             { "x-dead-letter-exchange", k_DeadLetterExchange }
                 });
         }
-        
+
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var consumer = new AsyncEventingBasicConsumer(_channel);
@@ -147,11 +147,11 @@ namespace OrderService.BackgroundServices
 
         public override void Dispose()
         {
-            try 
-            { 
-                _channel?.Close(); 
-                _connection?.Close(); 
-            } 
+            try
+            {
+                _channel?.Close();
+                _connection?.Close();
+            }
             catch { }
             base.Dispose();
         }

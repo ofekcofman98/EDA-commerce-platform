@@ -4,13 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 namespace Shared.Contracts
 {
-    public class Item
+    public static class KafkaConstants
     {
-        public string itemId { get; set; }
-        public int quantity { get; set; }
-        public decimal price { get; set; }
+        public const string OrdersTopic = "orders.topic";
+        public const string DeadLetterTopic = "dlx_orders.topic";
     }
 }

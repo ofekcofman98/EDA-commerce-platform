@@ -16,13 +16,15 @@ namespace CartService.Producer
 
         private IConnection? _connection;
         private IModel? _channel;
+        private readonly ILogger<RabbitMQPublisher> _logger;
 
         private const string k_ExchangeName = RabbitMQConstants.Exchange.Orders;
         private const string k_QueueName = RabbitMQConstants.Queue.Orders;
         private const string k_DeadLetterExchange = RabbitMQConstants.Exchange.DeadLetter;
 
-        public RabbitMQPublisher(ConnectionFactory i_Factory)
+        public RabbitMQPublisher(ConnectionFactory i_Factory, ILogger<RabbitMQPublisher> logger)
         {
+            _logger = logger;
             _connection = i_Factory.CreateConnection();
             _channel = _connection.CreateModel();
 
@@ -53,21 +55,32 @@ namespace CartService.Producer
 
         public Task PublishAsync(EventEnvelope eventEnvelope)
         {
-            string message = JsonSerializer.Serialize(eventEnvelope);
-            byte[] body = Encoding.UTF8.GetBytes(message);
-
-            string routingKey = eventEnvelope.EventType switch
+            try
             {
-                EventType.OrderCreated => RabbitMQConstants.RoutingKey.OrderCreated,
-                EventType.OrderUpdated => RabbitMQConstants.RoutingKey.OrderUpdated,
-                _ => RabbitMQConstants.RoutingKey.AllOrders
-            };
+                string message = JsonSerializer.Serialize(eventEnvelope);
+                byte[] body = Encoding.UTF8.GetBytes(message);
 
-            _channel.BasicPublish(
-                exchange: k_ExchangeName,
-                routingKey: routingKey,
-                basicProperties: null,
-                body: body);
+                string routingKey = eventEnvelope.EventType switch
+                {
+                    EventType.OrderCreated => RabbitMQConstants.RoutingKey.OrderCreated,
+                    EventType.OrderUpdated => RabbitMQConstants.RoutingKey.OrderUpdated,
+                    _ => RabbitMQConstants.RoutingKey.AllOrders
+                };
+
+                _channel.BasicPublish(
+                    exchange: k_ExchangeName,
+                    routingKey: routingKey,
+                    basicProperties: null,
+                    body: body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to publish RabbitMQ message. Exchange: {Exchange}, RoutingKey: {RoutingKey}",
+                k_ExchangeName,
+                eventEnvelope.EventType);
+
+                throw;
+            }
 
             return Task.CompletedTask;
         }

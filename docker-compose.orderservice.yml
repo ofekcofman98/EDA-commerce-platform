@@ -7,13 +7,13 @@ services:
       context: .                 
       dockerfile: OrderService/Dockerfile
     environment:
-      ASPNETCORE_URLS: http://0.0.0.0:8081
-      RabbitMQ__HostName: rabbitmq
-      RabbitMQ__UserName: user
-      RabbitMQ__Password: password
-      RabbitMQ__Port: "5672"
+      - ASPNETCORE_URLS=http://0.0.0.0:8081
+      - Kafka__BootstrapServers=kafka:9092
     ports:
       - "8081:8081"
+    # depends_on:
+    #   kafka:
+    #     condition: service_started
     networks:
       - eda_net    
 

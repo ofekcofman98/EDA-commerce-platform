@@ -1,4 +1,5 @@
-﻿using OrderService.Data;
+using OrderService.BackgroundServices;
+using OrderService.Data;
 using Shared.Contracts;
 using Shared.Contracts.Events;
 using System.Text.Json;
@@ -8,11 +9,14 @@ namespace OrderService.OrderHandling
     public class OrderUpdatedHandler : IOrderEventHandler
     {
         private readonly IOrderRepository _repository;
+        private readonly ILogger<OrderUpdatedHandler> _logger;
 
-        public OrderUpdatedHandler(IOrderRepository i_Repository)
+        public OrderUpdatedHandler(IOrderRepository i_Repository, ILogger<OrderUpdatedHandler> logger)
         {
+            _logger = logger;
             _repository = i_Repository;
         }
+        
 
         public EventType EventType => EventType.OrderUpdated;
 
@@ -22,21 +26,25 @@ namespace OrderService.OrderHandling
 
             if (update == null)
             {
-                Console.WriteLine("OrderUpdated payload is null");
+                _logger.LogError("OrderUpdated payload is null");
                 return;
             }
+            
 
             var existing = _repository.GetById(update.OrderId);
-
+            
             if (existing == null)
             {
-                Console.WriteLine($"Order {update.OrderId} not found");
+                _logger.LogWarning("Order {OrderId} not found", update.OrderId);
                 return;
             }
 
             existing.Order.Status = update.OrderStatus;
 
-            Console.WriteLine($"Order {update.OrderId} updated!");
+            _logger.LogInformation(
+                "Order {OrderId} updated to status {Status}",
+                update.OrderId,
+                update.OrderStatus);
         }
     }
 }

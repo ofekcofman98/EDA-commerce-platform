@@ -13,28 +13,28 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-var rmq = builder.Configuration.GetSection("RabbitMQ");
+//var rmq = builder.Configuration.GetSection("RabbitMQ");
 
-builder.Services.AddSingleton<ConnectionFactory>(_ =>
-{
-    return new ConnectionFactory
-    {
-        HostName = rmq["HostName"] ?? "rabbitmq",
-        UserName = rmq["UserName"] ?? "user",
-        Password = rmq["Password"] ?? "password",
-        Port = int.TryParse(rmq["Port"], out var p) ? p : 5672,
-        DispatchConsumersAsync = true
-    };
-});
+//builder.Services.AddSingleton<ConnectionFactory>(_ =>
+//{
+//    return new ConnectionFactory
+//    {
+//        HostName = rmq["HostName"] ?? "rabbitmq",
+//        UserName = rmq["UserName"] ?? "user",
+//        Password = rmq["Password"] ?? "password",
+//        Port = int.TryParse(rmq["Port"], out var p) ? p : 5672,
+//        DispatchConsumersAsync = true
+//    };
+//});
 
-builder.Services.AddScoped<IOrderEventHandler, OrderCreatedHandler>();
-builder.Services.AddScoped<IOrderEventHandler, OrderUpdatedHandler>();
-
-
-builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
+builder.Services.AddSingleton<IOrderEventHandler, OrderCreatedHandler>();
+builder.Services.AddSingleton<IOrderEventHandler, OrderUpdatedHandler>();
 
 
-builder.Services.AddHostedService<RabbitMQOrderListener>();
+builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
+
+
+builder.Services.AddHostedService<KafkaOrderListener>();
 
 var app = builder.Build();
 
