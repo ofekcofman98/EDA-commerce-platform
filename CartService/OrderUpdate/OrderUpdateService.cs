@@ -2,6 +2,7 @@
 using CartService.Producer;
 using Shared.Contracts;
 using Shared.Contracts.Events;
+using Shared.Contracts.Orders;
 using System.Text.Json;
 
 namespace CartService.OrderUpdate
@@ -39,7 +40,17 @@ namespace CartService.OrderUpdate
                 };
             }
 
-            existingOrder.Status = i_Request.OrderStatus;
+
+            if(!Enum.TryParse<OrderStatus>(i_Request.Status, ignoreCase: true, out var status))
+            {
+                return new ServiceResponse
+                {
+                    IsSuccesful = false,
+                    ErrorMessage = $"Invalid order status: {i_Request.Status}"
+                };
+            }
+
+            existingOrder.Status = status;
 
             var envelope = new EventEnvelope
             {

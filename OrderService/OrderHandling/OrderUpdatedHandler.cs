@@ -2,6 +2,7 @@ using OrderService.BackgroundServices;
 using OrderService.Data;
 using Shared.Contracts;
 using Shared.Contracts.Events;
+using Shared.Contracts.Orders;
 using System.Text.Json;
 
 namespace OrderService.OrderHandling
@@ -39,12 +40,22 @@ namespace OrderService.OrderHandling
                 return;
             }
 
-            existing.Order.Status = update.OrderStatus;
+            if(!Enum.TryParse<OrderStatus>(update.Status, ignoreCase: true, out var status))
+            {
+                _logger.LogWarning(
+                    "Invalid order status received in OrderUpdated event. OrderId: {OrderId}, Status: {Status}",
+                    update.OrderId,
+                    update.Status);
+
+                return;
+            }
+
+            existing.Order.Status = status;
 
             _logger.LogInformation(
                 "Order {OrderId} updated to status {Status}",
                 update.OrderId,
-                update.OrderStatus);
+                update.Status);
         }
     }
 }

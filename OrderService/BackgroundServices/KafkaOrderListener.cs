@@ -105,15 +105,14 @@ namespace OrderService.BackgroundServices
                 {
                     handler.Handle(envelope.Payload);
 
-                    _consumer.Commit(message);
-
                     _logger.LogInformation($"Processed event {envelope.EventType} for Order ID: {envelope.OrderId}");
                 }
                 else
                 {
                     _logger.LogWarning("No handler registered for event type {EventType}", envelope.EventType);
                 }
-
+                
+                _consumer.Commit(message);
             }
             catch (JsonException ex)
             {

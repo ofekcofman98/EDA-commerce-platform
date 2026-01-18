@@ -44,5 +44,4 @@ services:
 
 networks:
   eda_net:
-    external: true
     name: eda-net 

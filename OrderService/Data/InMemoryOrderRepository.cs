@@ -1,13 +1,21 @@
 using Shared.Contracts.Orders;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace OrderService.Data
 {
     public class InMemoryOrderRepository : IOrderRepository
     {
+        private readonly ILogger<InMemoryOrderRepository> _logger;
+
         private readonly ConcurrentDictionary<string, OrderDetails> _orderDetailsMap = new();
         private readonly ConcurrentDictionary<string, HashSet<string>> _topicOrders = new();
 
+        public InMemoryOrderRepository(ILogger<InMemoryOrderRepository> logger)
+        {
+            _logger = logger;
+        }
+        
         public void Add(OrderDetails i_OrderDetails)
         {
             _orderDetailsMap.TryAdd(i_OrderDetails.Order.OrderId, i_OrderDetails);
@@ -30,11 +38,13 @@ namespace OrderService.Data
 
         public IEnumerable<string> GetAllOrderIdsFromTopic(string i_TopicName)
         {
-
             if (_topicOrders.TryGetValue(i_TopicName, out HashSet<string>? orderIds))
             {
+                _logger.LogInformation("Found {Count} orders for topic {TopicName}", orderIds.Count, i_TopicName);
                 return orderIds;
             }
+
+            _logger.LogWarning("Topic lookup failed: The topic '{TopicName}' does not exist in the repository.", i_TopicName);
 
             return Array.Empty<string>();
         }
