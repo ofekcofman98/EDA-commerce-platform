@@ -31,7 +31,7 @@ namespace CartService.OrderCreation
             _producer = producer;
         }
 
-        public ServiceResponse CreateNewOrder(CreateOrderRequest i_Request)
+        public async Task<ServiceResponse> CreateNewOrder(CreateOrderRequest i_Request)
         {
             ValidationResult requestResult = validateRequest(i_Request);
             if(!requestResult.isValid)
@@ -62,7 +62,7 @@ namespace CartService.OrderCreation
                 Payload = JsonSerializer.SerializeToElement(newOrder)
             };
 
-            _producer.PublishAsync(envelope);
+            await _producer.PublishAsync(envelope);
 
             return new ServiceResponse
             {
@@ -74,7 +74,7 @@ namespace CartService.OrderCreation
 
         private Order generateOrder(CreateOrderRequest i_Request)
         {
-            List<Item> items = _itemGenerator.GenerateItems(i_Request.numOfItems);
+            List<Item> items = _itemGenerator.GenerateItems(i_Request.numOfItems.Value);
             Order newOrder = _orderGenerator.GenerateOrder(i_Request, items);
 
             return newOrder;

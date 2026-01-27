@@ -11,9 +11,9 @@ namespace CartService.Validator.Validators.OrderRequestsValidators
                 return ValidationResult.Failure("Request is null");
             }
 
-            if (i_Request.numOfItems <= 0)
+            if (string.IsNullOrWhiteSpace(i_Request.orderId))
             {
-                return ValidationResult.Failure("numOfItems must be greater than 0");
+                return ValidationResult.Failure("orderId is required");
             }
 
             return base.Handle(i_Request);

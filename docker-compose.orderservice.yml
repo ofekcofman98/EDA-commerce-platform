@@ -2,18 +2,12 @@
 
 services:
   orderservice:
-    container_name: orderservice
-    build:
-      context: .                 
-      dockerfile: OrderService/Dockerfile
+    image: ofekcofman98/eda-orderservice:latest
     environment:
       - ASPNETCORE_URLS=http://0.0.0.0:8081
       - Kafka__BootstrapServers=kafka:9092
     ports:
       - "8081:8081"
-    # depends_on:
-    #   kafka:
-    #     condition: service_started
     networks:
       - eda_net    
 

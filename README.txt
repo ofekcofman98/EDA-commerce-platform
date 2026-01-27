@@ -2,6 +2,7 @@
 Name: Ofek Cofman
 ID: 209395524
 
+(Instructions and APIs at the end)
 ################################
 
 (2) 
@@ -64,6 +65,23 @@ Error Handling:
 
 ################################
 
+Instructions:
+1. docker compose -f docker-compose.cartservice.yml up -d
+   (CartService + Kafka + Zookeeper, APIs on port 8080)
+
+2. docker compose -f docker-compose.orderservice.yml up -d
+   (OrderService consumer, APIs on port 8081)
+
+
+Note:
+CartService docker-compose must be started first, as it creates the shared Docker network and Kafka broker.
+
+
+Logs:
+docker compose -f docker-compose.cartservice.yml logs -f
+docker compose -f docker-compose.orderservice.yml logs -f
+
+
 
 APIs:
 
@@ -83,7 +101,15 @@ Producer (CartService) - port 8080
    "orderId": "1234",
    "status": "Confirmed"
   }
-
+  
+  Supported values:
+    New,
+    Pending,
+	Paid,
+    Confirmed,
+    Shipped,
+    Cancelled
+	
 
 Consumer (OrderService)
 GET http://localhost:8081/order-details?orderId=1234

@@ -13,5 +13,6 @@ namespace Shared.Contracts.Orders
         Confirmed,
         Shipped,
         Cancelled,
+        Paid
     }
 }

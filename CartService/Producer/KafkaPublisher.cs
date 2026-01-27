@@ -59,7 +59,7 @@ namespace CartService.Producer
                             Value = message
                         });
 
-                    _logger.LogDebug(
+                    _logger.LogInformation(
                         "Kafka message delivered. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}, Key: {Key}, attempts: {Attempt}",
                         deliveryResult.Topic,
                         deliveryResult.Partition,

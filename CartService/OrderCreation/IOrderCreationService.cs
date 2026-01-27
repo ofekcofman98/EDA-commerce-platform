@@ -4,6 +4,6 @@ namespace CartService.OrderCreation
 {
     public interface IOrderCreationService
     {
-        ServiceResponse CreateNewOrder(CreateOrderRequest i_Request);
+        Task<ServiceResponse> CreateNewOrder(CreateOrderRequest i_Request);
     }
 }

@@ -8,7 +8,6 @@ using Shared.Contracts;
 namespace CartService.Controllers
 {
     [ApiController]
-    //[Route("create-order")]
     public class OrderController : ControllerBase
     {
         private readonly IOrderCreationService _orderCreationService;
@@ -21,9 +20,9 @@ namespace CartService.Controllers
         }
 
         [HttpPost("create-order")]
-        public IActionResult CreateOrder([FromBody] CreateOrderRequest i_Request)
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest i_Request)
         {
-            ServiceResponse result = _orderCreationService.CreateNewOrder(i_Request);
+            ServiceResponse result = await _orderCreationService.CreateNewOrder(i_Request);
 
             if (result.IsSuccesful)
             {

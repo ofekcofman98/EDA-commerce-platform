@@ -27,10 +27,7 @@ services:
        - eda_net
 
   cartservice:
-    container_name: cartservice
-    build:
-      context: .                 
-      dockerfile: CartService/Dockerfile
+    image: ofekcofman98/eda-cartservice:latest
     environment:
       ASPNETCORE_URLS: http://0.0.0.0:8080
       Kafka__BootstrapServers: kafka:9092
