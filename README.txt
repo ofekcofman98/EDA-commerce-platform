@@ -35,12 +35,17 @@ Error Handling:
 	2. Chain of Responsibility: A design pattern used to ensure each order and item is structurally and logically valid
 	   (e.g., price, quantity, unique IDs) before being sent to the broker.
 	
-	3. Kafka reliability settings:
+	3. Fully Asynchronous Pipeline: 
+       The publisher uses 'await ProduceAsync'.
+	   This ensures that the HTTP response is only sent back to the client after Kafka has acknowledged receipt of the message (respecting Acks=All).
+	   This prevents "fire-and-forget" scenarios where a message might be lost without the client knowing.
+	
+	4. Kafka reliability settings:
 		Acks=All
 		EnableIdempotence=true
 		RetryBackoffMs and batching configuration
 	
-	4. Exception Management: All exceptions during the publishing phase are caught,
+	5. Exception Management: All exceptions during the publishing phase are caught,
 	   logged via ILogger, and return a structured error response to the client.
 
 
@@ -61,6 +66,24 @@ Error Handling:
 	4. Graceful Shutdown: Implements _consumer.Close() during service cancellation. 
 	   This ensures that offsets are committed correctly and the consumer group rebalances cleanly, 
 	   preventing message duplication upon restart.
+
+- Bonus: Schema Management & Advanced Serialization:
+	1. Avro & Schema Registry: 
+	   Instead of plain JSON strings, I implemented Avro serialization using the Confluent Schema Registry.
+	
+	2. Data Integrity (Contract-First): 
+	   By using a schema (.avsc), we ensure that the Producer and Consumer are always synced.
+	   If a producer attempts to send a message that doesn't match the schema, it will fail immediately, preventing data corruption.
+	
+	3. Manual Commit:
+	   The consumer uses EnableAutoCommit = false. 
+	   If a message fails processing (due to logic or format), we log the error and explicitly commit the offset. 
+	   This ensures the consumer skips invalid messages and doesn't get stuck in an infinite retry loop.
+
+	4. Hybrid Serialization: 
+	   I used a hybrid approach where the EventEnvelope is strictly typed via Avro,
+	   while the internal Payload remains a JSON string.
+	   This provides the best of both worlds: schema enforcement for the message structure and flexibility for the business data.
 
 
 ################################
@@ -115,3 +138,8 @@ Consumer (OrderService)
 GET http://localhost:8081/order-details?orderId=1234
 
 GET http://localhost:8081/getAllOrderIdsFromTopic?topicName=orders.topic
+
+
+How to verify Schema Registry (Bonus): 
+Once an order is created, the schema is automatically registered. 
+You can verify it by visiting: GET http://localhost:8085/subjects/orders.topic-value/versions/latest

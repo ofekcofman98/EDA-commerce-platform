@@ -1,4 +1,5 @@
-﻿using OrderService.BackgroundServices;
+﻿using Confluent.SchemaRegistry;
+using OrderService.BackgroundServices;
 using OrderService.Data;
 using OrderService.OrderHandling;
 using RabbitMQ.Client;
@@ -33,6 +34,15 @@ builder.Services.AddSingleton<IOrderEventHandler, OrderUpdatedHandler>();
 
 builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
 
+// Schema Registry
+builder.Services.AddSingleton<ISchemaRegistryClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new CachedSchemaRegistryClient(new SchemaRegistryConfig
+    {
+        Url = config["Kafka:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+    });
+});
 
 builder.Services.AddHostedService<KafkaOrderListener>();
 

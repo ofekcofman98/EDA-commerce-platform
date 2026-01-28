@@ -5,6 +5,7 @@ using CartService.Producer;
 using CartService.OrderCreation;
 using CartService.Data;
 using CartService.OrderUpdate;
+using Confluent.SchemaRegistry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +39,16 @@ builder.Services.AddScoped<IItemGenerator, RandomItemGenerator>();
 // Services
 builder.Services.AddScoped<IOrderCreationService, OrderCreationService>();
 builder.Services.AddScoped<IOrderUpdateService, OrderUpdateService>();
+
+// Schema Registry
+builder.Services.AddSingleton<ISchemaRegistryClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new CachedSchemaRegistryClient(new SchemaRegistryConfig
+    {
+        Url = config["Kafka:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+    });
+});
 
 var app = builder.Build();
 

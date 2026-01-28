@@ -1,4 +1,7 @@
 using Confluent.Kafka;
+using Confluent.Kafka.SyncOverAsync;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using OrderService.Data;
 using OrderService.OrderHandling;
 using Shared.Contracts;
@@ -10,11 +13,12 @@ namespace OrderService.BackgroundServices
     public class KafkaOrderListener : BackgroundService
     {
         private readonly IOrderRepository _orderRepository;
-        private readonly IConsumer<string, string> _consumer;
+        private readonly IConsumer<string, AvroEventEnvelope> _consumer;
         private readonly Dictionary<EventType, IOrderEventHandler> _handlers;
         private const string TopicName = KafkaConstants.OrdersTopic;
         private readonly ILogger<KafkaOrderListener> _logger;
 
+        private readonly ISchemaRegistryClient _schemaRegistryClient;
 
         public KafkaOrderListener(
           IConfiguration configuration,
@@ -26,6 +30,12 @@ namespace OrderService.BackgroundServices
             _orderRepository = orderRepository;
             _handlers = handlers.ToDictionary(h => h.EventType, h => h);
 
+            var schemaRegistryConfig = new SchemaRegistryConfig
+            {
+                Url = configuration["Kafka:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+            };
+            _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+
             var consumerConfig = new ConsumerConfig
             {
                 BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "kafka:9092",
@@ -34,7 +44,10 @@ namespace OrderService.BackgroundServices
                 EnableAutoCommit = false
             };
 
-            _consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+            _consumer = new ConsumerBuilder<string, AvroEventEnvelope>(consumerConfig)
+                    .SetValueDeserializer(new AvroDeserializer<AvroEventEnvelope>(_schemaRegistryClient).AsSyncOverAsync())
+                    .Build();
+            
             _consumer.Subscribe(TopicName);
         }
 
@@ -47,7 +60,7 @@ namespace OrderService.BackgroundServices
                 {
                     while (!stoppingToken.IsCancellationRequested)
                     {
-                        ConsumeResult<string, string> message = null;
+                        ConsumeResult<string, AvroEventEnvelope> message = null;
                         try
                         {
                             message = _consumer.Consume(stoppingToken);
@@ -85,19 +98,24 @@ namespace OrderService.BackgroundServices
             }, stoppingToken);
         }
 
-        private void ProcessOrderEvent(ConsumeResult<string, string> message)
+        private void ProcessOrderEvent(ConsumeResult<string, AvroEventEnvelope> message)
         {
             try
             {
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var avroValue = message.Message.Value;
 
-                var envelope = JsonSerializer.Deserialize<EventEnvelope>(message.Value, options);
-
-                if (envelope == null)
+                if (avroValue == null)
                 {
-                    _logger.LogError("Received invalid event envelope. Message: {Message}", message.Value);
+                    _logger.LogError("Received null Avro value at offset {Offset}", message.Offset);
                     return;
                 }
+
+                var envelope = new EventEnvelope
+                {
+                    EventType = Enum.Parse<EventType>(avroValue.EventType),
+                    OrderId = avroValue.OrderId,
+                    Payload = JsonDocument.Parse(avroValue.Payload).RootElement
+                };
 
                 _orderRepository.AddOrderToTopic(message.Topic, envelope.OrderId);
 
@@ -117,10 +135,12 @@ namespace OrderService.BackgroundServices
             catch (JsonException ex)
             {
                 _logger.LogError(ex, "Failed to deserialize Kafka message. Payload: {Payload}", message.Value);
+                _consumer.Commit(message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing Kafka message. OrderId: {OrderId}", message?.Message?.Key);
+                _consumer.Commit(message);
             }
         }
     }

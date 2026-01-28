@@ -2,6 +2,8 @@
 using Confluent.Kafka;
 using System.Text.Json;
 using Shared.Contracts;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 
 namespace CartService.Producer
 {
@@ -10,12 +12,22 @@ namespace CartService.Producer
         private const int MaxRetries = 3;
         private static readonly TimeSpan BaseDelay = TimeSpan.FromMilliseconds(200);
 
-        private readonly IProducer<string, string> _producer;
+        private readonly IProducer<string, AvroEventEnvelope> _producer;
         private readonly ILogger<KafkaPublisher> _logger;
 
         private const string TopicName = KafkaConstants.OrdersTopic;
+        private readonly ISchemaRegistryClient _schemaRegistryClient;
+
         public KafkaPublisher(IConfiguration configuration, ILogger<KafkaPublisher> logger)
         {
+            _logger = logger;
+            
+            var schemaRegistryConfig = new SchemaRegistryConfig
+            {
+                Url = configuration["Kafka:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+            };
+            _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+
             var config = new ProducerConfig
             {
                 BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "kafka:9092",
@@ -27,23 +39,20 @@ namespace CartService.Producer
                 MessageTimeoutMs = 3000
             };
 
-            _producer = new ProducerBuilder<string, string>(config).Build();
-            _logger = logger;
+            _producer = new ProducerBuilder<string, AvroEventEnvelope>(config)
+                            .SetValueSerializer(new AvroSerializer<AvroEventEnvelope>(_schemaRegistryClient))
+                            .Build();
         }
 
 
         public async Task PublishAsync(EventEnvelope eventEnvelope)
         {
-            string message;
-            try
+            var avroEnvelope = new AvroEventEnvelope
             {
-                message = JsonSerializer.Serialize(eventEnvelope);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error serializing event envelope. OrderId: {OrderId}", eventEnvelope.OrderId);
-                throw;
-            }
+                EventType = eventEnvelope.EventType.ToString(),
+                OrderId = eventEnvelope.OrderId,
+                Payload = eventEnvelope.Payload.GetRawText()
+            };
 
             int attempts = 0;
 
@@ -53,14 +62,14 @@ namespace CartService.Producer
                 {
                     var deliveryResult = await _producer.ProduceAsync(
                         topic: TopicName,
-                        new Message<string, string>
+                        new Message<string, AvroEventEnvelope>
                         {
                             Key = eventEnvelope.OrderId,
-                            Value = message
+                            Value = avroEnvelope
                         });
 
                     _logger.LogInformation(
-                        "Kafka message delivered. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}, Key: {Key}, attempts: {Attempt}",
+                        "AVRO MESSAGE DELIVERED. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}, Key: {Key}, attempts: {Attempt}",
                         deliveryResult.Topic,
                         deliveryResult.Partition,
                         deliveryResult.Offset,
@@ -69,7 +78,7 @@ namespace CartService.Producer
 
                     return;
                 }
-                catch (ProduceException<string, string> ex) when (attempts < MaxRetries)
+                catch (ProduceException<string, AvroEventEnvelope> ex) when (attempts < MaxRetries)
                 {
                     attempts++;
 

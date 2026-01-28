@@ -3,9 +3,14 @@
 services:
   orderservice:
     image: ofekcofman98/eda-orderservice:latest
+    build:
+      context: . 
+      dockerfile: OrderService/Dockerfile
+
     environment:
       - ASPNETCORE_URLS=http://0.0.0.0:8081
       - Kafka__BootstrapServers=kafka:9092
+      - Kafka__SchemaRegistryUrl=http://schema-registry:8081
     ports:
       - "8081:8081"
     networks:
