@@ -9,6 +9,6 @@ namespace Shared.Contracts
     public class CreateOrderRequest
     {
         public string orderId { get; set; }
-        public int numOfItems { get; set; }
+        public int? numOfItems { get; set; }
     }
 }

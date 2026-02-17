@@ -1,0 +1,10 @@
+﻿{
+  "namespace": "Shared.Contracts.Events",
+  "type": "record",
+  "name": "AvroEventEnvelope",
+  "fields": [
+    { "name": "EventType", "type": "string" },
+    { "name": "OrderId", "type": "string" },
+    { "name": "Payload", "type": "string" }
+  ]
+}

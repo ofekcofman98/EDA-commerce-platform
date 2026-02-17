@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using OrderService.Data;
+using OrderService.Interfaces;
 using Shared.Contracts.Orders;
 
 namespace OrderService.Controllers
 {
     [ApiController]
-    [Route("order-details")]
+    //[Route("order-details")]
     public class OrderController : ControllerBase
     {
         private readonly IOrderRepository _orderRepository;
@@ -16,7 +16,7 @@ namespace OrderService.Controllers
             _orderRepository = orderRepository;
         }
 
-        [HttpGet(Name = "order-details")]
+        [HttpGet("order-details")]
         public IActionResult GetOrder(string orderId)
         {
             OrderDetails? orderDetails = _orderRepository.GetById(orderId);
@@ -29,7 +29,7 @@ namespace OrderService.Controllers
             return Ok(orderDetails);
         }
 
-        [HttpGet(Name = "getAllOrderIdsFromTopic")]
+        [HttpGet("getAllOrderIdsFromTopic")]
         public IActionResult GetAllOrderIdsFromTopic(string topicName)
         {
             var orderIds = _orderRepository.GetAllOrderIdsFromTopic(topicName);

@@ -1,10 +1,11 @@
-﻿using Shared.Contracts;
+﻿using CartService.Interfaces;
+using Shared.Contracts;
 
 namespace CartService.Validator
 {
     public class BaseValidator<T> : IValidator<T>
     {
-        private IValidator<T> _nextValidator;
+        private IValidator<T>? _nextValidator;
 
         public IValidator<T> SetNext(IValidator<T> i_NextValidator)
         {

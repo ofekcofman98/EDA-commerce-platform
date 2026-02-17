@@ -1,4 +1,5 @@
-﻿using CartService.Data;
+﻿using CartService.Interfaces;
+using CartService.Data;
 using Shared.Contracts;
 
 namespace CartService.Validator.Validators.OrderRequestsValidators

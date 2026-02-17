@@ -1,6 +1,6 @@
 ﻿using Shared.Contracts.Orders;
 
-namespace OrderService.ShippingCost
+namespace OrderService.Services
 {
     public class ShippingCostService
     {

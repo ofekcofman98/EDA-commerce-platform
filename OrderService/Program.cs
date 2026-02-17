@@ -1,7 +1,8 @@
-﻿using OrderService.BackgroundServices;
+﻿using Confluent.SchemaRegistry;
+using OrderService.BackgroundServices;
 using OrderService.Data;
-using OrderService.OrderHandling;
-using RabbitMQ.Client;
+using OrderService.Interfaces;
+using OrderService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,28 +14,33 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-var rmq = builder.Configuration.GetSection("RabbitMQ");
+// Auto-register all IOrderEventHandler implementations as Singletons
+var handlerType = typeof(IOrderEventHandler);
+var handlerImplementations = handlerType.Assembly.GetTypes()
+    .Where(type => handlerType.IsAssignableFrom(type) && 
+                   type.IsClass && 
+                   !type.IsAbstract)
+    .ToList();
 
-builder.Services.AddSingleton<ConnectionFactory>(_ =>
+foreach (var implementation in handlerImplementations)
 {
-    return new ConnectionFactory
+    builder.Services.AddSingleton(handlerType, implementation);
+}
+
+
+builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
+
+// Schema Registry
+builder.Services.AddSingleton<ISchemaRegistryClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new CachedSchemaRegistryClient(new SchemaRegistryConfig
     {
-        HostName = rmq["HostName"] ?? "rabbitmq",
-        UserName = rmq["UserName"] ?? "user",
-        Password = rmq["Password"] ?? "password",
-        Port = int.TryParse(rmq["Port"], out var p) ? p : 5672,
-        DispatchConsumersAsync = true
-    };
+        Url = config["Kafka:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+    });
 });
 
-builder.Services.AddScoped<IOrderEventHandler, OrderCreatedHandler>();
-builder.Services.AddScoped<IOrderEventHandler, OrderUpdatedHandler>();
-
-
-builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
-
-
-builder.Services.AddHostedService<RabbitMQOrderListener>();
+builder.Services.AddHostedService<KafkaOrderListener>();
 
 var app = builder.Build();
 

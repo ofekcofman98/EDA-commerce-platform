@@ -1,24 +1,6 @@
 # docker-compose.cartservice.yml
 
 services:
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   container_name: rabbitmq
-  #   hostname: rabbitmq
-  #   ports:
-  #     - "5672:5672"
-  #     - "15672:15672"
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: user
-  #     RABBITMQ_DEFAULT_PASS: password
-  #   healthcheck:
-  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - eda_net
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
     container_name: zookeeper
@@ -44,19 +26,42 @@ services:
      networks:
        - eda_net
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.3.0
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8085:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:9092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - eda_net
+
   cartservice:
-    container_name: cartservice
+    image: ofekcofman98/eda-cartservice:latest
     build:
-      context: .                 
+      context: . 
       dockerfile: CartService/Dockerfile
+
     environment:
       ASPNETCORE_URLS: http://0.0.0.0:8080
       Kafka__BootstrapServers: kafka:9092
+      Kafka__SchemaRegistryUrl: http://schema-registry:8081
     ports:
       - "8080:8080"
     depends_on:
       kafka:
         condition: service_started
+      schema-registry:
+        condition: service_healthy
     networks:
       - eda_net
 

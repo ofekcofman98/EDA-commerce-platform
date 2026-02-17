@@ -1,4 +1,5 @@
-﻿using Shared.Contracts;
+﻿using CartService.Interfaces;
+using Shared.Contracts;
 
 namespace CartService.Validator.Validators.OrderRequestsValidators
 {
@@ -11,9 +12,14 @@ namespace CartService.Validator.Validators.OrderRequestsValidators
                 return ValidationResult.Failure("Request is null");
             }
 
-            if (string.IsNullOrWhiteSpace(i_Request.orderId))
+            if (i_Request.numOfItems == null)
             {
-                return ValidationResult.Failure("orderId is required");
+                return ValidationResult.Failure("numOfItems is required");
+            }
+
+            if (i_Request.numOfItems <= 0)
+            {
+                return ValidationResult.Failure("numOfItems must be greater than 0");
             }
 
             return base.Handle(i_Request);

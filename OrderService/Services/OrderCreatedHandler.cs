@@ -1,17 +1,20 @@
-﻿using OrderService.Data;
-using OrderService.ShippingCost;
+﻿using OrderService.Interfaces;
+using OrderService.Services;
 using Shared.Contracts.Events;
 using Shared.Contracts.Orders;
 using System.Text.Json;
 
-namespace OrderService.OrderHandling
+namespace OrderService.Services
 {
     public class OrderCreatedHandler : IOrderEventHandler
     {
         private readonly IOrderRepository _repository;
-        public OrderCreatedHandler(IOrderRepository i_Repository)
+        private readonly ILogger<OrderCreatedHandler> _logger;
+
+        public OrderCreatedHandler(IOrderRepository i_Repository, ILogger<OrderCreatedHandler> logger)
         {
             _repository = i_Repository;
+            _logger = logger;
         }
 
         public EventType EventType => EventType.OrderCreated;
@@ -22,7 +25,7 @@ namespace OrderService.OrderHandling
 
             if (order == null)
             {
-                Console.WriteLine("OrderCreated payload is null");
+                _logger.LogError("OrderUpdated payload is null");
                 return;
             }
 
@@ -32,7 +35,11 @@ namespace OrderService.OrderHandling
 
             _repository.Add(orderDetails);
 
-            Console.WriteLine("Order created!");
+            _logger.LogInformation(
+                "Order {OrderId} create! Status: {Status}, Shipping cost: {shippingCost}",
+                orderDetails.Order.OrderId,
+                orderDetails.Order.Status,
+                orderDetails.shippingCost);
         }
     }
 }

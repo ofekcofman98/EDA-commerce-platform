@@ -1,43 +1,81 @@
 ﻿using Shared.Contracts.Events;
 using Confluent.Kafka;
 using System.Text.Json;
+using Shared.Contracts;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 
 namespace CartService.Producer
 {
     public class KafkaPublisher : IEventProducer, IDisposable
     {
-        private readonly IProducer<string, string> _producer;
-        private const string TopicName = "orders";
-        public KafkaPublisher(IConfiguration configuration)
+        private readonly IProducer<string, AvroEventEnvelope> _producer;
+        private readonly ILogger<KafkaPublisher> _logger;
+        private readonly string _topicName;
+        private readonly ISchemaRegistryClient _schemaRegistryClient;
+
+        public KafkaPublisher(IConfiguration configuration, ILogger<KafkaPublisher> logger)
         {
+            _logger = logger;
+            
+            // Read settings from KafkaSettings section
+            _topicName = configuration["KafkaSettings:TopicName"] ?? "orders.topic";
+            
+            var schemaRegistryConfig = new SchemaRegistryConfig
+            {
+                Url = configuration["KafkaSettings:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+            };
+            _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+
             var config = new ProducerConfig
             {
-                BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "kafka:9092",
-                Acks = Acks.All,
-                EnableIdempotence = true,
-                BatchSize = 32 * 1024,
-                LingerMs = 10,
-                RetryBackoffMs = 100,
-                MessageTimeoutMs = 3000
+                BootstrapServers = configuration["KafkaSettings:BootstrapServers"] ?? "kafka:9092",
+                Acks = Acks.Leader,
+                MessageTimeoutMs = 5000,
+                RetryBackoffMs = 100
             };
 
-            _producer = new ProducerBuilder<string, string>(config).Build();
+            _producer = new ProducerBuilder<string, AvroEventEnvelope>(config)
+                            .SetValueSerializer(new AvroSerializer<AvroEventEnvelope>(_schemaRegistryClient))
+                            .Build();
         }
 
 
         public async Task PublishAsync(EventEnvelope eventEnvelope)
         {
-            string message = JsonSerializer.Serialize(eventEnvelope);
+            var avroEnvelope = new AvroEventEnvelope
+            {
+                EventType = eventEnvelope.EventType.ToString(),
+                OrderId = eventEnvelope.OrderId,
+                Payload = eventEnvelope.Payload.GetRawText()
+            };
 
-            var deliveryResult = await _producer.ProduceAsync(
-                topic: TopicName,
-                new Message<string, string>
-                {
-                    Key = eventEnvelope.OrderId,
-                    Value = message
-                });
+            try
+            {
+                var deliveryResult = await _producer.ProduceAsync(
+                    topic: _topicName,
+                    new Message<string, AvroEventEnvelope>
+                    {
+                        Key = eventEnvelope.OrderId,
+                        Value = avroEnvelope
+                    });
 
-            Console.WriteLine($"Delivered to {deliveryResult.TopicPartitionOffset}");
+                _logger.LogInformation(
+                    "AVRO MESSAGE DELIVERED. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}, Key: {Key}",
+                    deliveryResult.Topic,
+                    deliveryResult.Partition,
+                    deliveryResult.Offset,
+                    eventEnvelope.OrderId);
+            }
+            catch (ProduceException<string, AvroEventEnvelope> ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Kafka publish failed. OrderId: {OrderId}",
+                    eventEnvelope.OrderId);
+
+                throw;
+            }
         }
 
         public void Dispose()
