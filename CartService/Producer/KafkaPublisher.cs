@@ -9,28 +9,46 @@ namespace CartService.Producer
 {
     public class KafkaPublisher : IEventProducer, IDisposable
     {
-        private const int MaxRetries = 3;
-        private static readonly TimeSpan BaseDelay = TimeSpan.FromMilliseconds(200);
-
         private readonly IProducer<string, AvroEventEnvelope> _producer;
         private readonly ILogger<KafkaPublisher> _logger;
-
-        private const string TopicName = KafkaConstants.OrdersTopic;
+        private readonly string _topicName;
+        private readonly int _maxRetries;
+        private readonly TimeSpan _baseDelay;
         private readonly ISchemaRegistryClient _schemaRegistryClient;
 
         public KafkaPublisher(IConfiguration configuration, ILogger<KafkaPublisher> logger)
         {
             _logger = logger;
             
+            // Read settings from KafkaSettings section
+            _topicName = configuration["KafkaSettings:TopicName"] ?? "orders.topic";
+            
+            // Read retry configuration with validation
+            var maxRetriesStr = configuration["KafkaSettings:MaxRetries"];
+            if (string.IsNullOrEmpty(maxRetriesStr) || !int.TryParse(maxRetriesStr, out _maxRetries))
+            {
+                _logger.LogWarning("KafkaSettings:MaxRetries not configured or invalid. Using default: 3");
+                _maxRetries = 3;
+            }
+            
+            var baseDelayMsStr = configuration["KafkaSettings:BaseDelayMs"];
+            int baseDelayMs;
+            if (string.IsNullOrEmpty(baseDelayMsStr) || !int.TryParse(baseDelayMsStr, out baseDelayMs))
+            {
+                _logger.LogWarning("KafkaSettings:BaseDelayMs not configured or invalid. Using default: 200ms");
+                baseDelayMs = 200;
+            }
+            _baseDelay = TimeSpan.FromMilliseconds(baseDelayMs);
+            
             var schemaRegistryConfig = new SchemaRegistryConfig
             {
-                Url = configuration["Kafka:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+                Url = configuration["KafkaSettings:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
             };
             _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
 
             var config = new ProducerConfig
             {
-                BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "kafka:9092",
+                BootstrapServers = configuration["KafkaSettings:BootstrapServers"] ?? "kafka:9092",
                 Acks = Acks.All,
                 EnableIdempotence = true,
                 BatchSize = 32 * 1024,
@@ -61,7 +79,7 @@ namespace CartService.Producer
                 try
                 {
                     var deliveryResult = await _producer.ProduceAsync(
-                        topic: TopicName,
+                        topic: _topicName,
                         new Message<string, AvroEventEnvelope>
                         {
                             Key = eventEnvelope.OrderId,
@@ -78,15 +96,15 @@ namespace CartService.Producer
 
                     return;
                 }
-                catch (ProduceException<string, AvroEventEnvelope> ex) when (attempts < MaxRetries)
+                catch (ProduceException<string, AvroEventEnvelope> ex) when (attempts < _maxRetries)
                 {
                     attempts++;
 
-                    var delay = TimeSpan.FromMilliseconds(BaseDelay.TotalMilliseconds * Math.Pow(2, attempts));
+                    var delay = TimeSpan.FromMilliseconds(_baseDelay.TotalMilliseconds * Math.Pow(2, attempts));
 
                     _logger.LogWarning(ex, "Kafka publish failed. Retrying {Attempt}/{MaxRetries} after {Delay}ms. OrderId: {OrderId}",
                         attempts,
-                        MaxRetries,
+                        _maxRetries,
                         delay.TotalMilliseconds,
                         eventEnvelope.OrderId);
 
@@ -97,7 +115,7 @@ namespace CartService.Producer
                     _logger.LogError(
                         ex,
                         "Kafka publish failed after {Retries} retries. OrderId: {OrderId}",
-                        MaxRetries,
+                        _maxRetries,
                         eventEnvelope.OrderId);
 
                     throw;

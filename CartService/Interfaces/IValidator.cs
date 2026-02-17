@@ -1,6 +1,7 @@
 ﻿using Shared.Contracts;
+using CartService.Validator;
 
-namespace CartService.Validator
+namespace CartService.Interfaces
 {
     public interface IValidator<T>
     {

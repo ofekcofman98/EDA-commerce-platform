@@ -2,9 +2,7 @@ using Confluent.Kafka;
 using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
-using OrderService.Data;
-using OrderService.OrderHandling;
-using Shared.Contracts;
+using OrderService.Interfaces;
 using Shared.Contracts.Events;
 using System.Text.Json;
 
@@ -15,7 +13,7 @@ namespace OrderService.BackgroundServices
         private readonly IOrderRepository _orderRepository;
         private readonly IConsumer<string, AvroEventEnvelope> _consumer;
         private readonly Dictionary<EventType, IOrderEventHandler> _handlers;
-        private const string TopicName = KafkaConstants.OrdersTopic;
+        private readonly string _topicName = string.Empty;
         private readonly ILogger<KafkaOrderListener> _logger;
 
         private readonly ISchemaRegistryClient _schemaRegistryClient;
@@ -30,15 +28,43 @@ namespace OrderService.BackgroundServices
             _orderRepository = orderRepository;
             _handlers = handlers.ToDictionary(h => h.EventType, h => h);
 
+            // Read Kafka configuration with validation
+            var bootstrapServers = configuration["Kafka:BootstrapServers"];
+            var schemaRegistryUrl = configuration["Kafka:SchemaRegistryUrl"];
+            _topicName = configuration["Kafka:TopicName"];
+
+            // Validate required configuration
+            if (string.IsNullOrEmpty(bootstrapServers))
+            {
+                _logger.LogWarning("Kafka:BootstrapServers not configured. Using default: kafka:9092");
+                bootstrapServers = "kafka:9092";
+            }
+
+            if (string.IsNullOrEmpty(schemaRegistryUrl))
+            {
+                _logger.LogWarning("Kafka:SchemaRegistryUrl not configured. Using default: http://schema-registry:8081");
+                schemaRegistryUrl = "http://schema-registry:8081";
+            }
+
+            if (string.IsNullOrEmpty(_topicName))
+            {
+                _logger.LogWarning("Kafka:TopicName not configured. Using default: orders.topic");
+                _topicName = "orders.topic";
+            }
+
+            _logger.LogInformation(
+                "Initializing Kafka consumer with BootstrapServers: {BootstrapServers}, SchemaRegistry: {SchemaRegistry}, Topic: {Topic}",
+                bootstrapServers, schemaRegistryUrl, _topicName);
+
             var schemaRegistryConfig = new SchemaRegistryConfig
             {
-                Url = configuration["Kafka:SchemaRegistryUrl"] ?? "http://schema-registry:8081"
+                Url = schemaRegistryUrl
             };
             _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
 
             var consumerConfig = new ConsumerConfig
             {
-                BootstrapServers = configuration["Kafka:BootstrapServers"] ?? "kafka:9092",
+                BootstrapServers = bootstrapServers,
                 GroupId = "order-service-group",
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoCommit = false
@@ -48,7 +74,7 @@ namespace OrderService.BackgroundServices
                     .SetValueDeserializer(new AvroDeserializer<AvroEventEnvelope>(_schemaRegistryClient).AsSyncOverAsync())
                     .Build();
             
-            _consumer.Subscribe(TopicName);
+            _consumer.Subscribe(_topicName);
         }
 
 
@@ -60,7 +86,7 @@ namespace OrderService.BackgroundServices
                 {
                     while (!stoppingToken.IsCancellationRequested)
                     {
-                        ConsumeResult<string, AvroEventEnvelope> message = null;
+                        ConsumeResult<string, AvroEventEnvelope>? message = null;
                         try
                         {
                             message = _consumer.Consume(stoppingToken);
@@ -134,7 +160,7 @@ namespace OrderService.BackgroundServices
             }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, "Failed to deserialize Kafka message. Payload: {Payload}", message.Value);
+                _logger.LogError(ex, "Failed to deserialize Kafka message. Payload: {Payload}", message.Message.Value);
                 _consumer.Commit(message);
             }
             catch (Exception ex)

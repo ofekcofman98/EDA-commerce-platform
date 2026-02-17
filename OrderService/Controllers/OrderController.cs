@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using OrderService.Data;
+using OrderService.Interfaces;
 using Shared.Contracts.Orders;
 
 namespace OrderService.Controllers

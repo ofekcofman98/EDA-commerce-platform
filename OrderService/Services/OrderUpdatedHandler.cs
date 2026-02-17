@@ -1,11 +1,10 @@
-using OrderService.BackgroundServices;
-using OrderService.Data;
+using OrderService.Interfaces;
 using Shared.Contracts;
 using Shared.Contracts.Events;
 using Shared.Contracts.Orders;
 using System.Text.Json;
 
-namespace OrderService.OrderHandling
+namespace OrderService.Services
 {
     public class OrderUpdatedHandler : IOrderEventHandler
     {

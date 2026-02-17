@@ -1,5 +1,4 @@
-﻿using CartService.OrderCreation;
-using CartService.OrderUpdate;
+﻿using CartService.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
@@ -10,19 +9,17 @@ namespace CartService.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
-        private readonly IOrderCreationService _orderCreationService;
-        private readonly IOrderUpdateService _orderUpdateService;
+        private readonly IOrderService _orderService;
 
-        public OrderController(IOrderCreationService i_OrderCreationService, IOrderUpdateService i_OrderUpdateService)
+        public OrderController(IOrderService i_OrderService)
         {
-            _orderCreationService = i_OrderCreationService;
-            _orderUpdateService = i_OrderUpdateService;
+            _orderService = i_OrderService;
         }
 
         [HttpPost("create-order")]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest i_Request)
         {
-            ServiceResponse result = await _orderCreationService.CreateNewOrder(i_Request);
+            ServiceResponse result = await _orderService.CreateNewOrder(i_Request);
 
             if (result.IsSuccesful)
             {
@@ -37,7 +34,7 @@ namespace CartService.Controllers
         [HttpPut("update-order")]
         public async Task<IActionResult> UpdateOrder([FromBody] UpdateOrderRequest i_Request)
         {
-            var response = await _orderUpdateService.UpdateOrderStatus(i_Request);
+            var response = await _orderService.UpdateOrderStatus(i_Request);
 
             if (response.IsSuccesful)
             {

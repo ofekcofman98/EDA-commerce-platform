@@ -1,4 +1,5 @@
-﻿using Shared.Contracts;
+﻿using CartService.Interfaces;
+using Shared.Contracts;
 
 namespace CartService.Validator.Validators.ItemValidators
 {

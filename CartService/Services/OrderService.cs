@@ -1,34 +1,35 @@
-﻿using CartService.Validator;
-using CartService.Validator.Validators;
+using CartService.Interfaces;
+using CartService.Validator;
+using CartService.Data;
 using Shared.Contracts;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using CartService.Generators;
 using CartService.Producer;
-using CartService.Data;
-using CartService.Validator.Validators.OrderValidators;
-using CartService.Validator.Validators.ItemValidators;
-using CartService.Validator.Validators.OrderRequestsValidators;
 using Shared.Contracts.Events;
 using Shared.Contracts.Orders;
 using System.Text.Json;
 
-namespace CartService.OrderCreation
+namespace CartService.Services
 {
-    public class OrderCreationService : IOrderCreationService
+    public class OrderService : IOrderService
     {
         private readonly IOrderGenerator _orderGenerator;
         private readonly IItemGenerator _itemGenerator;
-        private readonly IOrderRepository _orderRepository;
-
+        private readonly IOrderRepository _repository;
         private readonly IEventProducer _producer;
+        private readonly IValidationFactory _validationFactory;
 
-
-        public OrderCreationService(IOrderGenerator i_OrderGenerator, IItemGenerator i_ItemGenerator, IOrderRepository i_OrderRepository, IEventProducer producer)
+        public OrderService(
+            IOrderGenerator i_OrderGenerator, 
+            IItemGenerator i_ItemGenerator, 
+            IOrderRepository i_Repository, 
+            IEventProducer i_Producer,
+            IValidationFactory i_ValidationFactory)
         {
             _orderGenerator = i_OrderGenerator;
             _itemGenerator = i_ItemGenerator;
-            _orderRepository = i_OrderRepository;
-            _producer = producer;
+            _repository = i_Repository;
+            _producer = i_Producer;
+            _validationFactory = i_ValidationFactory;
         }
 
         public async Task<ServiceResponse> CreateNewOrder(CreateOrderRequest i_Request)
@@ -53,7 +54,7 @@ namespace CartService.OrderCreation
                 return new ServiceResponse { IsSuccesful = false, ErrorMessage = itemResult.ErrorMessage };
             }
 
-            _orderRepository.Add(newOrder);
+            _repository.Add(newOrder);
 
             var envelope = new EventEnvelope
             {
@@ -72,9 +73,59 @@ namespace CartService.OrderCreation
             };
         }
 
+        public async Task<ServiceResponse> UpdateOrderStatus(UpdateOrderRequest i_Request)
+        {
+            if (i_Request == null)
+            {
+                return new ServiceResponse
+                {
+                    IsSuccesful = false,
+                    ErrorMessage = "Invalid request"
+                };
+            }
+
+            var existingOrder = _repository.GetById(i_Request.OrderId);
+
+            if(existingOrder == null)
+            {
+                return new ServiceResponse
+                {
+                    IsSuccesful = false,
+                    ErrorMessage = $"Order {i_Request.OrderId} not found"
+                };
+            }
+
+            if(!Enum.TryParse<OrderStatus>(i_Request.Status, ignoreCase: true, out var status))
+            {
+                return new ServiceResponse
+                {
+                    IsSuccesful = false,
+                    ErrorMessage = $"Invalid order status: {i_Request.Status}"
+                };
+            }
+
+            existingOrder.Status = status;
+
+            var envelope = new EventEnvelope
+            {
+                EventType = EventType.OrderUpdated,
+                OrderId = existingOrder.OrderId,
+                Payload = JsonSerializer.SerializeToElement(i_Request)
+            };
+
+            await _producer.PublishAsync(envelope);
+
+            return new ServiceResponse
+            {
+                IsSuccesful = true,
+                OrderId = existingOrder.OrderId,
+                Order = existingOrder
+            };
+        }
+
         private Order generateOrder(CreateOrderRequest i_Request)
         {
-            List<Item> items = _itemGenerator.GenerateItems(i_Request.numOfItems.Value);
+            List<Item> items = _itemGenerator.GenerateItems(i_Request.numOfItems ?? 0);
             Order newOrder = _orderGenerator.GenerateOrder(i_Request, items);
 
             return newOrder;
@@ -87,7 +138,7 @@ namespace CartService.OrderCreation
                 return ValidationResult.Failure("Request is null");
             }
 
-            IValidator<CreateOrderRequest> chain = buildRequestValidationChain();
+            IValidator<CreateOrderRequest> chain = _validationFactory.GetRequestChain();
             ValidationResult result = chain.Handle(i_Request);
 
             return result;
@@ -100,7 +151,7 @@ namespace CartService.OrderCreation
                 return ValidationResult.Failure("Order is null");
             }
 
-            IValidator<Order> chain = buildOrderValidationChain();
+            IValidator<Order> chain = _validationFactory.GetOrderChain();
             ValidationResult result = chain.Handle(i_Order);
 
             return result;
@@ -108,7 +159,7 @@ namespace CartService.OrderCreation
 
         private ValidationResult validateItem(IEnumerable<Item> i_Items)
         {
-            IValidator<Item> validator = buildItemValidationChain();
+            IValidator<Item> validator = _validationFactory.GetItemChain();
 
             foreach (Item item in i_Items)
             {
@@ -122,44 +173,6 @@ namespace CartService.OrderCreation
 
             return ValidationResult.Success();
         }
-
-        private IValidator<CreateOrderRequest> buildRequestValidationChain()
-        {
-            IValidator<CreateOrderRequest> validator1 = new OrderRequestIdRequiredValidator();
-            IValidator<CreateOrderRequest> validator2 = new NumOfItemsValidator();
-            IValidator<CreateOrderRequest> validator3 = new UniqueOrderIdRequestValidator(_orderRepository);
-
-            validator1.SetNext(validator2);
-            validator2.SetNext(validator3);
-
-            return validator1;
-        }
-
-        private IValidator<Order> buildOrderValidationChain()
-        {
-            IValidator<Order> validator1 = new OrderIdValidator();
-            IValidator<Order> validator2 = new CustomerIdValidator();
-            IValidator<Order> validator3 = new TotalAmountValidator();
-            IValidator<Order> validator4 = new UniqueItemIdValidator();
-            IValidator<Order> validator5 = new CurrencyValidator();
-
-            validator1.SetNext(validator2);
-            validator2.SetNext(validator3);
-            validator3.SetNext(validator4);
-            validator4.SetNext(validator5);
-
-            return validator1;
-        }
-
-        private IValidator<Item> buildItemValidationChain()
-        {
-            IValidator<Item> validator1 = new QuantityValidator();
-            IValidator<Item> validator2 = new PriceValidator();
-
-            validator1.SetNext(validator2);
-
-            return validator1;
-        }
-
     }
 }
+

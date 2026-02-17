@@ -1,10 +1,10 @@
 using CartService.Generators.Random;
 using CartService.Generators;
-using RabbitMQ.Client;
 using CartService.Producer;
-using CartService.OrderCreation;
+using CartService.Interfaces;
+using CartService.Services;
 using CartService.Data;
-using CartService.OrderUpdate;
+using CartService.Validator.Factories;
 using Confluent.SchemaRegistry;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,30 +15,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-// RabbitMQ
-//var rmq = builder.Configuration.GetSection("RabbitMQ");
-//builder.Services.AddSingleton(new ConnectionFactory
-//{
-//    HostName = rmq["HostName"] ?? "localhost",
-//    UserName = rmq["UserName"] ?? "guest",
-//    Password = rmq["Password"] ?? "guest",
-//    Port = int.TryParse(rmq["Port"], out var p) ? p : 5672,
-//    DispatchConsumersAsync = true
-//});
-
 // Publisher
 builder.Services.AddSingleton<IEventProducer, KafkaPublisher>();
 
 // In-memory Order Repository
 builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
 
-// Generators
-builder.Services.AddScoped<IOrderGenerator, RandomOrderGenerator>();
-builder.Services.AddScoped<IItemGenerator, RandomItemGenerator>();
+// Generators (stateless - Singleton)
+builder.Services.AddSingleton<IOrderGenerator, RandomOrderGenerator>();
+builder.Services.AddSingleton<IItemGenerator, RandomItemGenerator>();
 
-// Services
-builder.Services.AddScoped<IOrderCreationService, OrderCreationService>();
-builder.Services.AddScoped<IOrderUpdateService, OrderUpdateService>();
+// Validation Factory (stateless - Singleton)
+builder.Services.AddSingleton<IValidationFactory, ValidationFactory>();
+
+// Services (business logic - Transient)
+builder.Services.AddTransient<IOrderService, OrderService>();
 
 // Schema Registry
 builder.Services.AddSingleton<ISchemaRegistryClient>(sp =>

@@ -1,6 +1,6 @@
 using Shared.Contracts.Orders;
 
-namespace OrderService.Data
+namespace OrderService.Interfaces
 {
     public interface IOrderRepository
     {

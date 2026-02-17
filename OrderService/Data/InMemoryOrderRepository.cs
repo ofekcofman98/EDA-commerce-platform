@@ -1,3 +1,4 @@
+using OrderService.Interfaces;
 using Shared.Contracts.Orders;
 using System.Collections.Concurrent;
 using System.Linq;

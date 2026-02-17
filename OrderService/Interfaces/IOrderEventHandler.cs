@@ -1,7 +1,7 @@
 ﻿using Shared.Contracts.Events;
 using System.Text.Json;
 
-namespace OrderService.OrderHandling
+namespace OrderService.Interfaces
 {
     public interface IOrderEventHandler
     {

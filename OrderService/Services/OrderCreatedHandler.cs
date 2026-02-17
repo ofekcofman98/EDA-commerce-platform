@@ -1,10 +1,10 @@
-﻿using OrderService.Data;
-using OrderService.ShippingCost;
+﻿using OrderService.Interfaces;
+using OrderService.Services;
 using Shared.Contracts.Events;
 using Shared.Contracts.Orders;
 using System.Text.Json;
 
-namespace OrderService.OrderHandling
+namespace OrderService.Services
 {
     public class OrderCreatedHandler : IOrderEventHandler
     {

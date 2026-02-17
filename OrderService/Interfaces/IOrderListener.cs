@@ -1,4 +1,4 @@
-﻿namespace OrderService.BackgroundServices
+﻿namespace OrderService.Interfaces
 {
     public interface IOrderListener
     {
