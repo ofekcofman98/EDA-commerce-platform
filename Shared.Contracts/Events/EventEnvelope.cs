@@ -10,7 +10,7 @@ namespace Shared.Contracts.Events
     public class EventEnvelope
     {
         public EventType EventType { get; set; }
-        public string OrderId { get; set; }
+        public required string OrderId { get; set; }
         public JsonElement Payload { get; set; }
     }
 }

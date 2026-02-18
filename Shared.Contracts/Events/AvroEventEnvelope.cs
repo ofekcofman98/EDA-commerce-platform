@@ -10,9 +10,9 @@ namespace Shared.Contracts.Events
 {
     public class AvroEventEnvelope : ISpecificRecord
     {
-        public string EventType { get; set; }
-        public string OrderId { get; set; }
-        public string Payload { get; set; }
+        public required string EventType { get; set; }
+        public required string OrderId { get; set; }
+        public required string Payload { get; set; }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public virtual Schema Schema => Schema.Parse(

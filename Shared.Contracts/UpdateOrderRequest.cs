@@ -9,8 +9,8 @@ namespace Shared.Contracts
 {
     public class UpdateOrderRequest
     {
-        public string OrderId { get; set; }
+        public required string OrderId { get; set; }
         //public OrderStatus OrderStatus { get; set; }
-        public string Status { get; set; }
+        public required string Status { get; set; }
     }
 }

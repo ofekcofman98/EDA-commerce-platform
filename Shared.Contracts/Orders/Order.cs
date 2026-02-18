@@ -12,20 +12,25 @@ namespace Shared.Contracts.Orders
 {
     public class Order
     {
-        public string OrderId { get; set; }
-        public string CustomerId { get; set; }
+        public required string OrderId { get; set; }
+        public required string CustomerId { get; set; }
         public DateTime OrderDate { get; set; }
-        public List<Item> Items { get; set; }
+        public required List<Item> Items { get; set; }
         public decimal TotalAmount { get; set; }
-        public string Currency { get; set; }
+        public required string Currency { get; set; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public OrderStatus Status { get; set; }
+        
         public Order() { }
 
+        [System.Diagnostics.CodeAnalysis.SetsRequiredMembers]
         public Order(CreateOrderRequest i_Request)
         {
             OrderId = i_Request.orderId;
+            CustomerId = string.Empty;
+            Items = new List<Item>();
+            Currency = string.Empty;
         }
     }
 }
