@@ -9,7 +9,7 @@ namespace Shared.Contracts
 {
     public class Item
     {
-        public string itemId { get; set; }
+        public required string itemId { get; set; }
         public int quantity { get; set; }
         public decimal price { get; set; }
     }
